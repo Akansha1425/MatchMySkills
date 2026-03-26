@@ -53,7 +53,7 @@ class LoginActivity : AppCompatActivity() {
 
                     R.id.btnRecruiter -> {
                         tvTitle.text = "Recruiter Login"
-                        selectedRole = "student"
+                        selectedRole = "recruiter"
                         socialLayout.visibility = View.VISIBLE
                     }
 
@@ -84,7 +84,7 @@ class LoginActivity : AppCompatActivity() {
 
                     val userId = auth.currentUser?.uid
 
-                    Toast.makeText(this, "Login Successful", Toast.LENGTH_SHORT).show()
+
 
                     // 👉 Fetch user role from Firestore
                     firestore.collection("users").document(userId!!)
@@ -92,16 +92,28 @@ class LoginActivity : AppCompatActivity() {
                         .addOnSuccessListener { document ->
 
                             val role = document.getString("role")
+                            if (role == null) {
+                                Toast.makeText(this, "Role not found!", Toast.LENGTH_SHORT).show()
+                                return@addOnSuccessListener
+                            }
 
+                            // 🔥 MAIN FIX: Role validation
+                            if (role != selectedRole) {
+                                Toast.makeText(this, "Invalid role selected!", Toast.LENGTH_SHORT).show()
+                                return@addOnSuccessListener
+                            }
                             when (role) {
                                 "student" -> {
                                     startActivity(Intent(this, StudentDashboard::class.java))
+                                    finish()
                                 }
                                 "recruiter" -> {
                                     startActivity(Intent(this, RecruiterDashboard::class.java))
+                                    finish()
                                 }
                                 "admin" -> {
                                     startActivity(Intent(this, AdminDashboard::class.java))
+                                    finish()
                                 }
                             }
                         }
