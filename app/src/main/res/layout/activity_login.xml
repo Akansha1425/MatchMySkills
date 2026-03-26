@@ -18,14 +18,21 @@
         android:paddingBottom="32dp">
 
         <!-- App Logo -->
-        <ImageView
-            android:id="@+id/iv_logo"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+        <androidx.cardview.widget.CardView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:layout_gravity="center_horizontal"
-            android:src="@drawable/ic_logo"
-            android:contentDescription="MatchMySkills Logo" />
+            app:cardCornerRadius="50dp"
+            app:cardElevation="6dp">
 
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/logo"
+                android:contentDescription="MatchMySkills Logo"/>
+
+        </androidx.cardview.widget.CardView>
         <!-- Spacer -->
         <View
             android:layout_width="match_parent"

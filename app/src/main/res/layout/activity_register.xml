@@ -16,13 +16,21 @@
         android:paddingTop="48dp"
         android:paddingBottom="32dp">
 
-        <ImageView
-            android:id="@+id/iv_logo"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+        <androidx.cardview.widget.CardView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:layout_gravity="center_horizontal"
-            android:contentDescription="MatchMySkills Logo"
-            android:src="@drawable/ic_logo" />
+            app:cardCornerRadius="50dp"
+            app:cardElevation="6dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/logo"
+                android:contentDescription="MatchMySkills Logo"/>
+
+        </androidx.cardview.widget.CardView>
 
         <View
             android:layout_width="match_parent"
@@ -33,7 +41,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="14dp"
             android:fontFamily="sans-serif-medium"
             android:text="Create your Account"
             android:textColor="#1A1A2E"
@@ -185,8 +193,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
                 android:gravity="center"
+                android:layout_marginBottom="8dp"
                 android:orientation="horizontal">
 
                 <ImageButton
@@ -220,10 +228,6 @@
             </LinearLayout>
         </LinearLayout>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
 
         <LinearLayout
             android:layout_width="wrap_content"
