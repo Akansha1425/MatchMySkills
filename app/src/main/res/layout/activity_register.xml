@@ -166,13 +166,21 @@
             android:id="@+id/btn_create"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="10dp"
             android:backgroundTint="#30FFFF"
             android:elevation="4dp"
             android:text="Create Account"
             android:textColor="@color/black"
             android:textSize="16sp"
             app:cornerRadius="28dp" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:visibility="gone"
+            android:layout_marginBottom="10dp"/>
 
         <LinearLayout
             android:id="@+id/layout_social_signup"

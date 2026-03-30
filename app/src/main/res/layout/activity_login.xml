@@ -170,8 +170,16 @@
             android:textSize="16sp"
             android:backgroundTint="#30ffff"
             android:radius ="50dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="10dp"
             android:elevation="2dp" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:visibility="gone"
+            android:layout_marginBottom="10dp"/>
 
         <!-- Or Sign In With -->
         <TextView
