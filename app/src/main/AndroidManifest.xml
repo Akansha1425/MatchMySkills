@@ -21,6 +21,12 @@
             android:name=".StudentDashboard"
             android:exported="false"
             android:theme="@style/Theme.MatchMySkills" />
+        <activity
+            android:name=".InternshipActivity"
+            android:exported="false" />
+        <activity
+            android:name=".HackathonActivity"
+            android:exported="false" />
 
         <activity
             android:name=".RegisterActivity"
