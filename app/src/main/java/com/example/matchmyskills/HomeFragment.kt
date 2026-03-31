@@ -28,5 +28,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val intent = Intent(requireActivity(), HackathonActivity::class.java)
             startActivity(intent)
         }
+        
+        // 4. Set Click Listener for Jobs Button
+        val btnJobs = view.findViewById<Button>(R.id.btn_jobs)
+        btnJobs.setOnClickListener {
+            val intent = Intent(requireActivity(), JobActivity::class.java)
+            startActivity(intent)
+        }
     }
 }
