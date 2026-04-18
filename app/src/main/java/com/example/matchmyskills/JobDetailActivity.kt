@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.text.HtmlCompat
 import com.example.matchmyskills.model.Job
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.textfield.TextInputEditText
@@ -17,6 +18,7 @@ class JobDetailActivity : AppCompatActivity() {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private var currentJob: Job? = null
+    private lateinit var btnApply: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,23 +34,34 @@ class JobDetailActivity : AppCompatActivity() {
 
         populateUI(currentJob!!)
 
-        findViewById<Button>(R.id.btnApplyNowJob).setOnClickListener {
+        btnApply = findViewById(R.id.btnApplyNowJob)
+        btnApply.setOnClickListener {
             showApplicationDialog()
         }
+
+        checkIfAlreadyApplied()
     }
 
     private fun populateUI(job: Job) {
-        findViewById<TextView>(R.id.tvDetailJobTitle).text = job.title
-        findViewById<TextView>(R.id.tvDetailJobCompany).text = "At ${job.companyName}"
-        findViewById<TextView>(R.id.tvDetailJobDescription).text = job.description
+        findViewById<TextView>(R.id.tvDetailJobTitle).text = cleanDisplayText(job.title)
+        findViewById<TextView>(R.id.tvDetailJobCompany).text = "At ${cleanDisplayText(job.companyName)}"
+        findViewById<TextView>(R.id.tvDetailJobDescription).text = cleanDisplayText(job.description)
         
-        val skills = job.coreSkills.joinToString(", ")
+        val skills = job.coreSkills.map { cleanDisplayText(it) }.joinToString(", ")
         findViewById<TextView>(R.id.tvDetailJobSkills).text = if (skills.isEmpty()) "Not specified" else skills
 
-        findViewById<TextView>(R.id.tvDetailJobLocation).text = job.location
-        findViewById<TextView>(R.id.tvDetailJobCity).text = job.city ?: "Any"
-        findViewById<TextView>(R.id.tvDetailJobStipend).text = job.stipend
-        findViewById<TextView>(R.id.tvDetailJobDuration).text = job.duration
+        findViewById<TextView>(R.id.tvDetailJobLocation).text = cleanDisplayText(job.location)
+        findViewById<TextView>(R.id.tvDetailJobCity).text = cleanDisplayText(job.city ?: "Any")
+        findViewById<TextView>(R.id.tvDetailJobStipend).text = cleanDisplayText(job.stipend)
+        findViewById<TextView>(R.id.tvDetailJobDuration).text = cleanDisplayText(job.duration)
+    }
+
+    private fun cleanDisplayText(value: String): String {
+        if (value.isBlank()) return ""
+        return HtmlCompat.fromHtml(value, HtmlCompat.FROM_HTML_MODE_LEGACY)
+            .toString()
+            .replace("\\u00A0", " ")
+            .trim()
     }
 
     private fun showApplicationDialog() {
@@ -59,6 +72,7 @@ class JobDetailActivity : AppCompatActivity() {
         val etName = view.findViewById<TextInputEditText>(R.id.etName)
         val etEmail = view.findViewById<TextInputEditText>(R.id.etEmail)
         val etMarks = view.findViewById<TextInputEditText>(R.id.etMarks)
+        val etResumeUrl = view.findViewById<TextInputEditText>(R.id.etResumeUrl)
         val etReason = view.findViewById<TextInputEditText>(R.id.etReason)
         val btnSubmit = view.findViewById<Button>(R.id.btnSubmitApplication)
 
@@ -66,9 +80,10 @@ class JobDetailActivity : AppCompatActivity() {
             val name = etName.text.toString().trim()
             val email = etEmail.text.toString().trim()
             val marks = etMarks.text.toString().trim()
+            val resumeUrl = etResumeUrl.text.toString().trim()
             val reason = etReason.text.toString().trim()
 
-            if (name.isEmpty() || email.isEmpty() || marks.isEmpty() || reason.isEmpty()) {
+            if (name.isEmpty() || email.isEmpty() || resumeUrl.isEmpty() || reason.isEmpty()) {
                 Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -76,37 +91,60 @@ class JobDetailActivity : AppCompatActivity() {
             btnSubmit.isEnabled = false
             btnSubmit.text = "Submitting..."
 
-            submitApplication(name, email, marks, reason, dialog)
+            submitApplication(name, email, marks, resumeUrl, reason, dialog)
         }
 
         dialog.show()
     }
 
-    private fun submitApplication(name: String, email: String, marks: String, reason: String, dialog: BottomSheetDialog) {
+    private fun submitApplication(
+        name: String,
+        email: String,
+        marks: String,
+        resumeUrl: String,
+        reason: String,
+        dialog: BottomSheetDialog
+    ) {
         val job = currentJob ?: return
         val applicantId = auth.currentUser?.uid ?: "unknown_user"
+        val applicationId = UUID.randomUUID().toString()
+        val normalizedType = if (job.opportunityType.equals("INTERNSHIP", ignoreCase = true)) {
+            "INTERNSHIP"
+        } else {
+            "JOB"
+        }
 
         val applicationData = hashMapOf(
-            "id" to UUID.randomUUID().toString(),
+            "id" to applicationId,
+            "applicationId" to applicationId,
             "opportunityId" to job.id,
+            "externalOpportunityId" to job.id,
+            "jobId" to job.id, // Backward-compatible with existing recruiter-side queries
+            "opportunityType" to normalizedType,
+            "source" to job.source,
             "opportunityTitle" to job.title,
+            "companyName" to job.companyName,
             "recruiterId" to job.recruiterId,
             "candidateId" to applicantId,
+            "userId" to applicantId,
             "candidateName" to name,
+            "applicantName" to name,
             "candidateEmail" to email,
+            "applicantEmail" to email,
             "candidateMarks" to marks,
+            "resumeUrl" to resumeUrl,
             "candidateReason" to reason,
-            "status" to "Pending",
+            "status" to "Applied",
             "appliedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
 
         db.collection("applications")
-            .document(applicationData["id"] as String)
+            .document(applicationId)
             .set(applicationData)
             .addOnSuccessListener {
                 Toast.makeText(this, "Application Submitted Successfully!", Toast.LENGTH_LONG).show()
                 dialog.dismiss()
-                finish()
+                setAppliedState()
             }
             .addOnFailureListener { e ->
                 Toast.makeText(this, "Application Failed: ${e.message}", Toast.LENGTH_LONG).show()
@@ -115,5 +153,63 @@ class JobDetailActivity : AppCompatActivity() {
                     it.text = "Submit Application"
                 }
             }
+    }
+
+    private fun checkIfAlreadyApplied() {
+        val job = currentJob ?: return
+        val userId = auth.currentUser?.uid
+
+        if (userId.isNullOrBlank()) {
+            btnApply.isEnabled = false
+            btnApply.text = "Login to Apply"
+            return
+        }
+
+        btnApply.isEnabled = false
+        btnApply.text = "Checking..."
+
+        db.collection("applications")
+            .whereEqualTo("candidateId", userId)
+            .whereEqualTo("opportunityId", job.id)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { result ->
+                if (!result.isEmpty) {
+                    setAppliedState()
+                } else {
+                    checkLegacyJobApplication(userId, job.id)
+                }
+            }
+            .addOnFailureListener {
+                setReadyToApplyState()
+            }
+    }
+
+    private fun checkLegacyJobApplication(userId: String, jobId: String) {
+        db.collection("applications")
+            .whereEqualTo("candidateId", userId)
+            .whereEqualTo("jobId", jobId)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { legacyResult ->
+                if (!legacyResult.isEmpty) {
+                    setAppliedState()
+                } else {
+                    setReadyToApplyState()
+                }
+            }
+            .addOnFailureListener {
+                setReadyToApplyState()
+            }
+    }
+
+    private fun setAppliedState() {
+        btnApply.isEnabled = false
+        btnApply.text = "Already Applied"
+    }
+
+    private fun setReadyToApplyState() {
+        btnApply.isEnabled = true
+        btnApply.text = "Apply Now"
     }
 }

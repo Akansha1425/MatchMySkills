@@ -53,6 +53,9 @@ data class Job(
     val deadline: Date? = null, // Changed from Long
     val benefits: List<String> = emptyList(),
     val status: String = "Active", // Active, Closed
+    val opportunityType: String = "JOB", // JOB, INTERNSHIP
+    val source: String = "FIREBASE", // FIREBASE, EXTERNAL
+    val applyUrl: String? = null,
     @ServerTimestamp val createdAt: Date? = null
 ) : Parcelable
 
@@ -73,6 +76,9 @@ data class Hackathon(
     val teamSize: String = "",
     val deadline: Date? = null, // Changed from Long
     val status: String = "Active",
+    val opportunityType: String = "HACKATHON",
+    val source: String = "FIREBASE", // FIREBASE, EXTERNAL
+    val applyUrl: String? = null,
     @ServerTimestamp val createdAt: Date? = null
 ) : Parcelable
 
@@ -82,6 +88,9 @@ data class Hackathon(
 data class Application(
     @PrimaryKey val id: String = "",
     val jobId: String = "",
+    val opportunityId: String = "",
+    val opportunityType: String = "JOB",
+    val source: String = "FIREBASE",
     val recruiterId: String = "",
     val candidateId: String = "",
     val candidateName: String = "",

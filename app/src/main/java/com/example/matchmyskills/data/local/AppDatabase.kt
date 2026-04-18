@@ -28,7 +28,7 @@ interface ApplicationDao {
     suspend fun deleteApplicationsByJob(jobId: String)
 }
 
-@Database(entities = [User::class, Job::class, Hackathon::class, Application::class], version = 3, exportSchema = false)
+@Database(entities = [User::class, Job::class, Hackathon::class, Application::class], version = 4, exportSchema = false)
 @TypeConverters(com.example.matchmyskills.util.Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun jobDao(): JobDao

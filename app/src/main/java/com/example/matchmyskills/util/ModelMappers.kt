@@ -57,6 +57,9 @@ fun DocumentSnapshot.toJob(): Job? {
             deadline = getDateSafe("deadline"),
             benefits = get("benefits") as? List<String> ?: emptyList(),
             status = getString("status") ?: "Active",
+            opportunityType = getString("opportunityType") ?: "JOB",
+            source = getString("source") ?: "FIREBASE",
+            applyUrl = getString("applyUrl"),
             createdAt = getDateSafe("createdAt")
         )
     } catch (e: Exception) {
@@ -81,6 +84,9 @@ fun DocumentSnapshot.toHackathon(): Hackathon? {
             teamSize = getString("teamSize") ?: "",
             deadline = getDateSafe("deadline"),
             status = getString("status") ?: "Active",
+            opportunityType = getString("opportunityType") ?: "HACKATHON",
+            source = getString("source") ?: "FIREBASE",
+            applyUrl = getString("applyUrl"),
             createdAt = getDateSafe("createdAt")
         )
     } catch (e: Exception) {
@@ -94,6 +100,9 @@ fun DocumentSnapshot.toApplication(): Application? {
         Application(
             id = id,
             jobId = getString("jobId") ?: "",
+            opportunityId = getString("opportunityId") ?: getString("jobId") ?: "",
+            opportunityType = getString("opportunityType") ?: "JOB",
+            source = getString("source") ?: "FIREBASE",
             recruiterId = getString("recruiterId") ?: "",
             candidateId = getString("candidateId") ?: "",
             candidateName = getString("candidateName") ?: "",

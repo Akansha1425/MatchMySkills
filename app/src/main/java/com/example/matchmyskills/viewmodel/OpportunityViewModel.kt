@@ -53,7 +53,9 @@ class OpportunityViewModel @Inject constructor(
                 coreSkills = skillList,
                 duration = "$duration Months",
                 stipend = stipend,
-                deadline = deadlineDate
+                deadline = deadlineDate,
+                opportunityType = "INTERNSHIP",
+                source = "FIREBASE"
             )
             
             _createState.value = jobRepository.createJob(job)
@@ -90,7 +92,9 @@ class OpportunityViewModel @Inject constructor(
                 prizePool = prize,
                 teamSize = teamSize,
                 mode = mode,
-                deadline = deadlineDate
+                deadline = deadlineDate,
+                opportunityType = "HACKATHON",
+                source = "FIREBASE"
             )
             
             _createState.value = hackathonRepository.createHackathon(hackathon)
