@@ -51,27 +51,61 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
     }
 
     private fun updateBarChart(apps: List<com.example.matchmyskills.model.Application>) {
-        val entries = ArrayList<BarEntry>()
-        // Simplified: group by day/match tier for production
-        entries.add(BarEntry(1f, 10f))
-        entries.add(BarEntry(2f, 20f))
-        entries.add(BarEntry(3f, 15f))
+        val hackathonCount = apps.count { it.opportunityType.equals("HACKATHON", ignoreCase = true) }
+        val internshipCount = apps.count { it.opportunityType.equals("INTERNSHIP", ignoreCase = true) }
 
-        val dataSet = BarDataSet(entries, "Applications")
+        val entries = ArrayList<BarEntry>()
+        entries.add(BarEntry(0f, hackathonCount.toFloat()))
+        entries.add(BarEntry(1f, internshipCount.toFloat()))
+
+        val dataSet = BarDataSet(entries, "Hackathon vs Internship")
         dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList()
+        dataSet.valueTextSize = 12f
+        
         binding.barChart.data = BarData(dataSet)
+        binding.barChart.xAxis.apply {
+            valueFormatter = com.github.mikephil.charting.formatter.IndexAxisValueFormatter(listOf("Hackathons", "Internships"))
+            position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
+            setDrawGridLines(false)
+            granularity = 1f
+        }
         binding.barChart.invalidate()
     }
 
     private fun updatePieChart(apps: List<com.example.matchmyskills.model.Application>) {
-        val entries = ArrayList<PieEntry>()
-        entries.add(PieEntry(40f, "Shortlisted"))
-        entries.add(PieEntry(30f, "Pending"))
-        entries.add(PieEntry(30f, "Rejected"))
+        val total = apps.size.toFloat()
+        if (total == 0f) {
+            binding.pieChart.clear()
+            return
+        }
 
-        val dataSet = PieDataSet(entries, "Status")
-        dataSet.colors = ColorTemplate.COLORFUL_COLORS.toList()
+        val shortlisted = apps.count { it.status == "Shortlisted" }.toFloat()
+        val hired = apps.count { it.status == "Hired" }.toFloat()
+        val rejected = apps.count { it.status == "Rejected" }.toFloat()
+        val pending = apps.count { it.status == "Pending" || it.status == "Applied" }.toFloat()
+
+        val entries = ArrayList<PieEntry>()
+        
+        // Calculate based on true total of all applications
+        if (shortlisted > 0) entries.add(PieEntry((shortlisted / total) * 100f, "Shortlisted"))
+        if (hired > 0) entries.add(PieEntry((hired / total) * 100f, "Hired"))
+        if (rejected > 0) entries.add(PieEntry((rejected / total) * 100f, "Rejected"))
+        if (pending > 0) entries.add(PieEntry((pending / total) * 100f, "Pending"))
+
+        val dataSet = PieDataSet(entries, "Status Distribution")
+        dataSet.colors = listOf(
+            android.graphics.Color.parseColor("#4CAF50"), // Green for Shortlisted
+            android.graphics.Color.parseColor("#2196F3"), // Blue for Hired
+            android.graphics.Color.parseColor("#F44336"), // Red for Rejected
+            android.graphics.Color.parseColor("#FFC107")  // Amber for Pending
+        )
+        dataSet.sliceSpace = 3f
+        dataSet.valueTextSize = 14f
+        dataSet.valueTextColor = android.graphics.Color.WHITE
+        
         binding.pieChart.data = PieData(dataSet)
+        binding.pieChart.setUsePercentValues(true)
+        binding.pieChart.centerText = "Total\n${apps.size}"
         binding.pieChart.invalidate()
     }
 

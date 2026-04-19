@@ -40,10 +40,16 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
             toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
             tvName.text = app.candidateName
             tvCollege.text = app.candidateCollege
+            tvEmail.text = app.candidateEmail
+            tvMarks.text = "Marks: ${app.candidateMarks}"
+            tvReason.text = app.candidateReason
+            
             tvScoreValue.text = "${app.matchScore.toInt()}%"
             progressScore.progress = app.matchScore.toInt()
-            tvCoreMatch.text = "Core: ${app.coreMatchCount}" // Placeholder for total core skills
-            tvOptionalMatch.text = "Optional: ${app.optionalMatchCount}" // Placeholder for total optional skills
+            
+            // Show a simple unified summary of matched skills
+            tvCoreMatch.text = "${app.coreMatchCount} / ${app.optionalMatchCount} skills matched"
+            tvOptionalMatch.visibility = android.view.View.GONE
 
             cgSkills.removeAllViews()
             app.candidateSkills.forEach { skill ->
@@ -51,6 +57,45 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
                     text = skill
                 }
                 cgSkills.addView(chip)
+            }
+
+            cgMatchedSkills.removeAllViews()
+            app.matchedSkills.forEach { skill ->
+                val chip = com.google.android.material.chip.Chip(context).apply {
+                    text = skill
+                    setChipBackgroundColorResource(android.R.`color`.holo_green_light)
+                    alpha = 0.8f
+                }
+                cgMatchedSkills.addView(chip)
+            }
+
+            cgMissingSkills.removeAllViews()
+            app.missingSkills.forEach { skill ->
+                val chip = com.google.android.material.chip.Chip(context).apply {
+                    text = skill
+                    setChipBackgroundColorResource(android.R.`color`.holo_red_light)
+                    alpha = 0.8f
+                }
+                cgMissingSkills.addView(chip)
+            }
+
+            btnViewResume.setOnClickListener {
+                val url = app.resumeUrl.trim()
+                if (url.isNotBlank()) {
+                    try {
+                        val finalUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                            "https://$url"
+                        } else {
+                            url
+                        }
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(finalUrl))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Could not open resume. Please ensure a valid browser is installed.", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "No resume URL provided", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

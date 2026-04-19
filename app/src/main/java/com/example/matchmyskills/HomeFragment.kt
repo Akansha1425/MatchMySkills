@@ -35,5 +35,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val intent = Intent(requireActivity(), JobActivity::class.java)
             startActivity(intent)
         }
+
+        // 5. Set Click Listener for Profile Button
+        val btnProfile = view.findViewById<Button>(R.id.btn_profile)
+        btnProfile.setOnClickListener {
+            requireActivity().supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, StudentProfileFragment())
+                .addToBackStack(null)
+                .commit()
+        }
     }
 }

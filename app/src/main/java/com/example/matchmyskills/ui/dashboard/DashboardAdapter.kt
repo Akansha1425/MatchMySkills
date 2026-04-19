@@ -53,9 +53,32 @@ class DashboardAdapter(
         fun bind(job: Job) {
             binding.apply {
                 tvTitle.text = job.title
-                tvCompany.text = job.companyName
+                
+                // Fix: Handle blank/Unknown company
+                tvCompany.text = if (job.companyName.isNullOrBlank() || job.companyName.equals("Unknown", ignoreCase = true)) {
+                    "Posted by Recruiter"
+                } else {
+                    job.companyName
+                }
+
                 chipStatus.text = job.status
                 tvApplicants.text = "View Applicants"
+
+                // Fix: Dynamic Time Left
+                job.deadline?.let { deadline ->
+                    val currentTime = System.currentTimeMillis()
+                    val diff = deadline.time - currentTime
+                    val daysLeft = (diff / (1000 * 60 * 60 * 24)).toInt()
+                    tvTimeLeft.text = when {
+                        daysLeft > 0 -> "$daysLeft days left"
+                        daysLeft == 0 -> "Ends today"
+                        else -> "Expired"
+                    }
+                    tvTimeLeft.visibility = android.view.View.VISIBLE
+                } ?: run {
+                    tvTimeLeft.visibility = android.view.View.GONE
+                }
+
                 btnView.setOnClickListener { onJobClick(job) }
                 root.setOnClickListener { onJobClick(job) }
             }
@@ -67,10 +90,33 @@ class DashboardAdapter(
         fun bind(hackathon: Hackathon) {
             binding.apply {
                 tvTitle.text = hackathon.title
-                tvOrganizer.text = hackathon.organizer
+                
+                // Fix: Handle blank/Unknown organizer
+                tvOrganizer.text = if (hackathon.organizer.isNullOrBlank() || hackathon.organizer.equals("Unknown", ignoreCase = true)) {
+                    "Organized by Recruiter"
+                } else {
+                    hackathon.organizer
+                }
+
                 chipStatus.text = hackathon.status
                 tvPrize.text = "Pool: ${hackathon.prizePool}"
                 tvTeam.text = "Teams: ${hackathon.teamSize}"
+
+                // Fix: Dynamic Time Left
+                hackathon.deadline?.let { deadline ->
+                    val currentTime = System.currentTimeMillis()
+                    val diff = deadline.time - currentTime
+                    val daysLeft = (diff / (1000 * 60 * 60 * 24)).toInt()
+                    tvTimeLeft.text = when {
+                        daysLeft > 0 -> "$daysLeft days left"
+                        daysLeft == 0 -> "Ends today"
+                        else -> "Expired"
+                    }
+                    tvTimeLeft.visibility = android.view.View.VISIBLE
+                } ?: run {
+                    tvTimeLeft.visibility = android.view.View.GONE
+                }
+
                 root.setOnClickListener { onHackathonClick(hackathon) }
             }
         }
