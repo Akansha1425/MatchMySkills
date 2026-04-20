@@ -1,6 +1,7 @@
 package com.example.matchmyskills.ui.dashboard
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,14 +24,28 @@ class BottomSheetCreateOpportunity : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.cardInternship.setOnClickListener {
+            Log.d("CREATE_OPPORTUNITY", "Post Internship clicked")
+            val navController = findNavController()
             dismiss()
-            findNavController().navigate(R.id.action_dashboardFragment_to_createInternshipFragment)
+            navController.navigate(R.id.action_dashboardFragment_to_createInternshipFragment)
         }
+        binding.ivInternshipArrow.setOnClickListener { binding.cardInternship.performClick() }
 
         binding.cardHackathon.setOnClickListener {
+            Log.d("CREATE_OPPORTUNITY", "Organize Hackathon clicked")
+            val navController = findNavController()
             dismiss()
-            findNavController().navigate(R.id.action_dashboardFragment_to_createHackathonFragment)
+            navController.navigate(R.id.action_dashboardFragment_to_createHackathonFragment)
         }
+        binding.ivHackathonArrow.setOnClickListener { binding.cardHackathon.performClick() }
+
+        binding.cardJob.setOnClickListener {
+            Log.d("CREATE_OPPORTUNITY", "Post Job clicked")
+            val navController = findNavController()
+            dismiss()
+            navController.navigate(R.id.createJobFragment)
+        }
+        binding.ivJobArrow.setOnClickListener { binding.cardJob.performClick() }
     }
 
     override fun onDestroyView() {

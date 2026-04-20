@@ -20,6 +20,9 @@
             android:id="@+id/action_dashboardFragment_to_createHackathonFragment"
             app:destination="@id/createHackathonFragment" />
         <action
+            android:id="@+id/action_dashboardFragment_to_createJobFragment"
+            app:destination="@id/createJobFragment" />
+        <action
             android:id="@+id/action_dashboardFragment_to_hackathonDetailFragment"
             app:destination="@id/hackathonDetailFragment" />
     </fragment>
@@ -68,6 +71,11 @@
         android:id="@+id/createHackathonFragment"
         android:name="com.example.matchmyskills.ui.jobs.CreateHackathonFragment"
         android:label="Organize Hackathon" />
+
+    <fragment
+        android:id="@+id/createJobFragment"
+        android:name="com.example.matchmyskills.ui.jobs.CreateJobFragment"
+        android:label="Create Job" />
 
     <fragment
         android:id="@+id/applicantDetailFragment"

@@ -6,12 +6,15 @@ import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Button
+import android.widget.LinearLayout
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.appcompat.app.AlertDialog
 import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
 import com.example.matchmyskills.model.Hackathon
 import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.util.LocationHelper
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
@@ -39,9 +42,22 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var chartHackathons: PieChart
     private lateinit var tvGreeting: TextView
     private lateinit var btnLogout: MaterialButton
+    private lateinit var locationText: TextView
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+
+    private val requestLocationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("LocationPermission", "Permission granted, fetching location")
+            fetchLocation()
+        } else {
+            Log.w("LocationPermission", "Permission denied")
+            locationText.text = "Location permission denied"
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -56,11 +72,39 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         chartHackathons = view.findViewById(R.id.chart_hackathons)
         tvGreeting = view.findViewById(R.id.tv_greeting)
         btnLogout = view.findViewById(R.id.btn_logout)
+        locationText = view.findViewById(R.id.location_text)
 
         setupPieCharts()
         loadUserName()
         loadDashboardData()
         setupLogoutButton()
+        
+        // Request and fetch location
+        requestLocationPermission()
+    }
+
+    private fun requestLocationPermission() {
+        if (LocationHelper.isLocationPermissionGranted(requireContext())) {
+            Log.d("LocationPermission", "Permission already granted")
+            fetchLocation()
+        } else {
+            Log.d("LocationPermission", "Requesting permission")
+            requestLocationPermission.launch(LocationHelper.getRequiredPermissions()[0])
+        }
+    }
+
+    private fun fetchLocation() {
+        LocationHelper.fetchLocation(requireContext(), object : LocationHelper.LocationCallback {
+            override fun onLocationFetched(city: String, state: String) {
+                locationText.text = "📍 $city, $state"
+                Log.d("LocationFetched", "Location: $city, $state")
+            }
+
+            override fun onLocationError(message: String) {
+                locationText.text = message
+                Log.e("LocationError", message)
+            }
+        })
     }
 
     private fun setupPieCharts() {

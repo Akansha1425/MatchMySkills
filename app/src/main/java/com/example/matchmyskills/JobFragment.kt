@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.matchmyskills.adapter.JobOpportunityAdapter
 import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
 import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.util.toJob
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
@@ -56,31 +57,43 @@ class JobFragment : Fragment(R.layout.fragment_job) {
                 val jobList = mutableListOf<Job>()
                 for (doc in documents) {
                     try {
-                        val parsed = doc.toObject(Job::class.java)
-                        val job = parsed.copy(
-                            opportunityType = parsed.opportunityType.ifBlank { "JOB" },
-                            source = parsed.source.ifBlank { "FIREBASE" }
-                        )
-                        jobList.add(job)
+                        val parsed = doc.toJob()
+                        if (parsed != null) {
+                            jobList.add(
+                                parsed.copy(
+                                    opportunityType = parsed.opportunityType.ifBlank { "JOB" },
+                                    source = parsed.source.ifBlank { "FIREBASE" }
+                                )
+                            )
+                        }
                     } catch (e: Exception) {
                         Log.e("JobFragment", "Error parsing doc ${doc.id}", e)
                     }
                 }
+                Log.d("JobFragment", "Loaded ${jobList.size} Firestore jobs")
                 firebaseJobs = jobList
                 onSourceLoaded()
             }
             .addOnFailureListener { e ->
+                Log.e("JobFragment", "Failed to load Firebase jobs", e)
                 firebaseJobs = emptyList()
                 onSourceLoaded()
                 Toast.makeText(requireContext(), "Failed to load Firebase jobs: ${e.message}", Toast.LENGTH_SHORT).show()
             }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            externalJobs = ExternalOpportunityDataSource.fetchJobs(
-                keyword = "software",
-                type = "JOB"
-            )
-            onSourceLoaded()
+            try {
+                externalJobs = ExternalOpportunityDataSource.fetchJobs(
+                    keyword = "software",
+                    type = "JOB"
+                )
+                Log.d("JobFragment", "Loaded ${externalJobs.size} external jobs")
+            } catch (e: Exception) {
+                Log.e("JobFragment", "Failed to load external jobs", e)
+                externalJobs = emptyList()
+            } finally {
+                onSourceLoaded()
+            }
         }
     }
 
@@ -93,6 +106,7 @@ class JobFragment : Fragment(R.layout.fragment_job) {
         val merged = (firebaseJobs + externalJobs)
             .distinctBy { it.id }
 
+        Log.d("JobFragment", "Updating adapter with ${merged.size} jobs")
         jobOpportunityAdapter.updateData(merged)
     }
 }

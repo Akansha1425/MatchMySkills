@@ -17,6 +17,7 @@ class JobOpportunityAdapter(
         val tvJobTitle: TextView = itemView.findViewById(R.id.tvJobTitle)
         val tvJobCompany: TextView = itemView.findViewById(R.id.tvJobCompany)
         val tvJobLocation: TextView = itemView.findViewById(R.id.tvJobLocation)
+        val tvJobSkills: TextView = itemView.findViewById(R.id.tvJobSkills)
         val tvJobStipend: TextView = itemView.findViewById(R.id.tvJobStipend)
         val tvTimeLeft: TextView = itemView.findViewById(R.id.tvTimeLeft)
     }
@@ -30,24 +31,25 @@ class JobOpportunityAdapter(
     override fun onBindViewHolder(holder: JobViewHolder, position: Int) {
         val job = jobs[position]
         holder.tvJobTitle.text = job.title
-        
-        // Fix: Replace "Unknown" or blank with generic label
-        holder.tvJobCompany.text = if (job.companyName.isNullOrBlank() || job.companyName.equals("Unknown", ignoreCase = true)) {
+
+        holder.tvJobCompany.text = if (job.companyName.isBlank() || job.companyName.equals("Unknown", ignoreCase = true)) {
             "Posted by Recruiter"
         } else {
             job.companyName
         }
-        
-        holder.tvJobLocation.text = job.location
-        holder.tvJobStipend.text = "Stipend: ${job.stipend}"
 
-        // Fix: Dynamic Days Left Calculation
+        holder.tvJobLocation.text = job.location.ifBlank { "Remote" }
+        val skillText = job.coreSkills.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "Not specified"
+        holder.tvJobSkills.text = "Skills: $skillText"
+        holder.tvJobSkills.visibility = if (skillText == "Not specified") View.GONE else View.VISIBLE
+        holder.tvJobStipend.text = if (job.stipend.isBlank()) "Salary: Not shared" else "Salary: ${job.stipend}"
+
         val deadline = job.deadline
         if (deadline != null) {
             val currentTime = System.currentTimeMillis()
             val diff = deadline.time - currentTime
             val daysLeft = (diff / (1000 * 60 * 60 * 24)).toInt()
-            
+
             holder.tvTimeLeft.text = when {
                 daysLeft > 0 -> "$daysLeft days left"
                 daysLeft == 0 -> "Ends today"

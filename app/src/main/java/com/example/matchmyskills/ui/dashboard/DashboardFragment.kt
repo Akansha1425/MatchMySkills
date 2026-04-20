@@ -1,8 +1,10 @@
 package com.example.matchmyskills.ui.dashboard
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -11,6 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.matchmyskills.R
 import com.example.matchmyskills.databinding.FragmentDashboardBinding
 import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.ui.dashboard.BottomSheetCreateOpportunity
+import com.example.matchmyskills.util.LocationHelper
 import com.example.matchmyskills.util.UiState
 import com.example.matchmyskills.viewmodel.DashboardViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,6 +30,18 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
 
     private lateinit var adapter: DashboardAdapter
 
+    private val requestLocationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("LocationPermission", "Permission granted, fetching location")
+            fetchLocation()
+        } else {
+            Log.w("LocationPermission", "Permission denied")
+            binding.locationText.text = "Location permission denied"
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentDashboardBinding.bind(view)
@@ -33,6 +49,33 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
         setupRecyclerView()
         setupListeners()
         observeState()
+        
+        // Request and fetch location
+        requestLocationPermission()
+    }
+
+    private fun requestLocationPermission() {
+        if (LocationHelper.isLocationPermissionGranted(requireContext())) {
+            Log.d("LocationPermission", "Permission already granted")
+            fetchLocation()
+        } else {
+            Log.d("LocationPermission", "Requesting permission")
+            requestLocationPermission.launch(LocationHelper.getRequiredPermissions()[0])
+        }
+    }
+
+    private fun fetchLocation() {
+        LocationHelper.fetchLocation(requireContext(), object : LocationHelper.LocationCallback {
+            override fun onLocationFetched(city: String, state: String) {
+                binding.locationText.text = "📍 $city, $state"
+                Log.d("LocationFetched", "Location: $city, $state")
+            }
+
+            override fun onLocationError(message: String) {
+                binding.locationText.text = message
+                Log.e("LocationError", message)
+            }
+        })
     }
 
     private fun setupRecyclerView() {
@@ -52,7 +95,8 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
 
     private fun setupListeners() {
         binding.fabAdd.setOnClickListener {
-            BottomSheetCreateOpportunity().show(childFragmentManager, BottomSheetCreateOpportunity.TAG)
+            Log.d("CREATE_OPPORTUNITY", "Dashboard FAB clicked")
+            BottomSheetCreateOpportunity().show(parentFragmentManager, BottomSheetCreateOpportunity.TAG)
         }
     }
 

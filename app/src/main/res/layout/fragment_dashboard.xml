@@ -43,15 +43,49 @@
             android:layout_height="wrap_content"
             android:padding="16dp">
 
+            <!-- LOCATION HEADER -->
+            <LinearLayout
+                android:id="@+id/location_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="0dp"
+                android:paddingVertical="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <ImageView
+                    android:id="@+id/location_icon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_menu_mylocation"
+                    android:contentDescription="Location icon"
+                    android:tint="?attr/colorPrimary" />
+
+                <TextView
+                    android:id="@+id/location_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Fetching location..."
+                    android:textSize="14sp"
+                    android:textColor="#666666"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/tv_greeting"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:text="Hello, Recruiter!"
                 android:textAppearance="?attr/textAppearanceHeadlineMedium"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@id/location_header" />
 
             <TextView
                 android:id="@+id/tv_summary_title"

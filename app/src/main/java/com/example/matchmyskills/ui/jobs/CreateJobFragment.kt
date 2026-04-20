@@ -1,31 +1,29 @@
 package com.example.matchmyskills.ui.jobs
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.matchmyskills.R
 import com.example.matchmyskills.databinding.FragmentCreateJobBinding
-import com.example.matchmyskills.util.UiState
-import com.example.matchmyskills.viewmodel.OpportunityViewModel
 import com.google.android.material.datepicker.MaterialDatePicker
-import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@AndroidEntryPoint
 class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
-    private val viewModel: OpportunityViewModel by viewModels()
+
     private var _binding: FragmentCreateJobBinding? = null
     private val binding get() = _binding!!
 
+    private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
     private var selectedDeadline: Date? = null
     private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
@@ -36,7 +34,6 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
         setupDropdowns()
         setupDatePicker()
         setupListeners()
-        observeState()
     }
 
     private fun setupDropdowns() {
@@ -91,6 +88,10 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
             val employmentType = binding.actEmploymentType.text.toString().trim()
             val salary = binding.etSalary.text.toString().trim()
 
+            val skillList = skills.split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+
             val valid = validateInputs(
                 jobTitle = jobTitle,
                 companyName = companyName,
@@ -98,7 +99,7 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
                 workMode = workMode,
                 location = location,
                 experience = experience,
-                skills = skills,
+                skillList = skillList,
                 jobFunction = jobFunction,
                 employmentType = employmentType,
                 deadline = selectedDeadline
@@ -106,18 +107,18 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
 
             if (!valid) return@setOnClickListener
 
-            viewModel.createJobOpportunity(
+            saveJob(
                 jobTitle = jobTitle,
                 companyName = companyName,
                 description = description,
                 workMode = workMode,
                 location = location,
                 experience = experience,
-                skills = skills,
+                skills = skillList,
                 jobFunction = jobFunction,
                 employmentType = employmentType,
                 salary = salary,
-                deadline = selectedDeadline
+                deadline = selectedDeadline!!
             )
         }
     }
@@ -129,7 +130,7 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
         workMode: String,
         location: String,
         experience: String,
-        skills: String,
+        skillList: List<String>,
         jobFunction: String,
         employmentType: String,
         deadline: Date?
@@ -160,7 +161,7 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
             binding.tilExperience.error = "Experience is required"
             valid = false
         }
-        if (skills.split(",").map { it.trim() }.filter { it.isNotEmpty() }.isEmpty()) {
+        if (skillList.isEmpty()) {
             binding.tilSkills.error = "At least one skill is required"
             valid = false
         }
@@ -180,6 +181,71 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
         return valid
     }
 
+    private fun saveJob(
+        jobTitle: String,
+        companyName: String,
+        description: String,
+        workMode: String,
+        location: String,
+        experience: String,
+        skills: List<String>,
+        jobFunction: String,
+        employmentType: String,
+        salary: String,
+        deadline: Date
+    ) {
+        setLoading(true)
+
+        val recruiterId = auth.currentUser?.uid.orEmpty()
+        val job = hashMapOf(
+            "jobTitle" to jobTitle,
+            "title" to jobTitle,
+            "companyName" to companyName,
+            "description" to description,
+            "workMode" to workMode,
+            "location" to location,
+            "city" to location,
+            "experience" to experience,
+            "skills" to skills,
+            "coreSkills" to skills,
+            "jobFunction" to jobFunction,
+            "employmentType" to employmentType,
+            "salary" to salary,
+            "stipend" to salary,
+            "deadline" to deadline,
+            "status" to "Active",
+            "opportunityType" to "JOB",
+            "source" to "FIREBASE",
+            "recruiterId" to recruiterId,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+
+        Log.d("CreateJobFragment", "Saving job: $job")
+
+        db.collection("jobs")
+            .add(job)
+            .addOnSuccessListener { documentReference ->
+                Log.d("CreateJobFragment", "Job saved successfully with id=${documentReference.id}")
+                Toast.makeText(requireContext(), "Job posted successfully", Toast.LENGTH_SHORT).show()
+                setLoading(false)
+                findNavController().popBackStack()
+            }
+            .addOnFailureListener { exception ->
+                Log.e("CreateJobFragment", "Failed to save job", exception)
+                setLoading(false)
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to post job: ${exception.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun setLoading(isLoading: Boolean) {
+        binding.btnSubmit.isEnabled = !isLoading
+        binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+    }
+
     private fun clearErrors() {
         binding.tilJobTitle.error = null
         binding.tilCompanyName.error = null
@@ -191,33 +257,6 @@ class CreateJobFragment : Fragment(R.layout.fragment_create_job) {
         binding.tilJobFunction.error = null
         binding.tilEmploymentType.error = null
         binding.tilDeadline.error = null
-    }
-
-    private fun observeState() {
-        viewModel.createState.onEach { state ->
-            when (state) {
-                is UiState.Loading -> {
-                    binding.btnSubmit.isEnabled = false
-                    binding.progressBar.visibility = View.VISIBLE
-                }
-                is UiState.Success -> {
-                    binding.btnSubmit.isEnabled = true
-                    binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, "Job posted successfully", Toast.LENGTH_SHORT).show()
-                    viewModel.resetState()
-                    findNavController().popBackStack()
-                }
-                is UiState.Error -> {
-                    binding.btnSubmit.isEnabled = true
-                    binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
-                }
-                else -> {
-                    binding.btnSubmit.isEnabled = true
-                    binding.progressBar.visibility = View.GONE
-                }
-            }
-        }.launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
     override fun onDestroyView() {

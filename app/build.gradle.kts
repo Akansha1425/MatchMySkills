@@ -93,6 +93,9 @@ dependencies {
 
     // Social Login
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+    
+    // Location Services
+    implementation("com.google.android.gms:play-services-location:21.1.0")
 
     // Testing
     testImplementation(libs.junit)

@@ -42,18 +42,26 @@ fun DocumentSnapshot.toUser(): User? {
 
 fun DocumentSnapshot.toJob(): Job? {
     return try {
+        val title = getString("title") ?: getString("jobTitle") ?: ""
+        val skills = (get("coreSkills") as? List<String>)
+            ?: (get("skills") as? List<String>)
+            ?: emptyList()
+        val location = getString("location") ?: getString("city") ?: "Remote"
+        val stipend = getString("stipend") ?: getString("salary") ?: ""
+        val duration = getString("duration") ?: getString("employmentType") ?: ""
+
         Job(
             id = id,
             recruiterId = getString("recruiterId") ?: "",
-            title = getString("title") ?: "",
+            title = title,
             companyName = getString("companyName") ?: "",
             description = getString("description") ?: "",
-            coreSkills = get("coreSkills") as? List<String> ?: emptyList(),
-            optionalSkills = get("optionalSkills") as? List<String> ?: emptyList(),
-            location = getString("location") ?: "Remote",
-            city = getString("city"),
-            duration = getString("duration") ?: "",
-            stipend = getString("stipend") ?: "",
+            coreSkills = skills,
+            optionalSkills = (get("optionalSkills") as? List<String>) ?: emptyList(),
+            location = location,
+            city = getString("city") ?: location,
+            duration = duration,
+            stipend = stipend,
             isPaid = getBoolean("isPaid") ?: true,
             deadline = getDateSafe("deadline"),
             benefits = get("benefits") as? List<String> ?: emptyList(),

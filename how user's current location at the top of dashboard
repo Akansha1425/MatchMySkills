@@ -1,0 +1,17 @@
+[33mcommit a65f1c06a2a4901e8125b9298c241e03db4a4e17[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Akansha Zambare <akanshazambare142005@gmail.com>
+Date:   Mon Apr 20 23:01:09 2026 +0530
+
+    Resolved conflicts after stash pop
+
+app/src/main/java/com/example/matchmyskills/model/Models.kt
+app/src/main/java/com/example/matchmyskills/repository/JobOpportunityRepository.kt
+app/src/main/java/com/example/matchmyskills/ui/dashboard/PostedJobsAdapter.kt
+app/src/main/java/com/example/matchmyskills/ui/jobs/CreateJobFragment.kt
+app/src/main/java/com/example/matchmyskills/util/ModelMappers.kt
+app/src/main/java/com/example/matchmyskills/viewmodel/OpportunityViewModel.kt
+app/src/main/res/drawable/ic_location_pin.xml
+app/src/main/res/drawable/ic_refresh.xml
+app/src/main/res/layout/fragment_create_job.xml
+firestore.rules
+storage.rules
