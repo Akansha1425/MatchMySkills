@@ -101,6 +101,66 @@ class OpportunityViewModel @Inject constructor(
         }
     }
 
+    fun createJobOpportunity(
+        jobTitle: String,
+        companyName: String,
+        description: String,
+        workMode: String,
+        location: String,
+        experience: String,
+        skills: String,
+        jobFunction: String,
+        employmentType: String,
+        salary: String,
+        deadline: java.util.Date?
+    ) {
+        val user = authRepository.getCurrentUser() ?: run {
+            _createState.value = UiState.Error("User not logged in")
+            return
+        }
+
+        val skillList = skills.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        if (
+            jobTitle.isBlank() ||
+            description.isBlank() ||
+            location.isBlank() ||
+            skillList.isEmpty() ||
+            deadline == null
+        ) {
+            _createState.value = UiState.Error("Please fill all required fields")
+            return
+        }
+
+        viewModelScope.launch {
+            _createState.value = UiState.Loading
+
+            val combinedDescription = buildString {
+                append(description)
+                if (workMode.isNotBlank()) append("\nWork Mode: ").append(workMode)
+                if (experience.isNotBlank()) append("\nExperience: ").append(experience)
+                if (jobFunction.isNotBlank()) append("\nFunction: ").append(jobFunction)
+                if (employmentType.isNotBlank()) append("\nEmployment Type: ").append(employmentType)
+            }
+
+            val job = Job(
+                id = UUID.randomUUID().toString(),
+                recruiterId = user.id,
+                title = jobTitle,
+                companyName = companyName.ifBlank { user.companyName ?: "Unknown" },
+                description = combinedDescription,
+                coreSkills = skillList,
+                location = workMode.ifBlank { location },
+                city = location,
+                stipend = salary,
+                deadline = deadline,
+                opportunityType = "JOB",
+                source = "FIREBASE"
+            )
+
+            _createState.value = jobRepository.createJob(job)
+        }
+    }
+
     fun resetState() {
         _createState.value = UiState.Empty
     }

@@ -60,6 +60,25 @@ data class Job(
 ) : Parcelable
 
 @Parcelize
+@TypeConverters(Converters::class)
+data class JobOpportunity(
+    val jobId: String = "",
+    val recruiterId: String = "",
+    val jobTitle: String = "",
+    val companyName: String = "",
+    val description: String = "",
+    val workMode: String = "",
+    val location: String = "",
+    val experience: String = "",
+    val skills: List<String> = emptyList(),
+    val jobFunction: String = "",
+    val employmentType: String = "",
+    val salary: String = "",
+    val deadline: Date? = null,
+    @ServerTimestamp val createdAt: Date? = null
+) : Parcelable
+
+@Parcelize
 @Entity(tableName = "hackathons")
 @TypeConverters(Converters::class)
 data class Hackathon(
