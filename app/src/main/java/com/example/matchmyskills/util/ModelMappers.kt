@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.matchmyskills.model.Application
 import com.example.matchmyskills.model.Hackathon
 import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.model.JobOpportunity
 import com.example.matchmyskills.model.User
 import com.google.firebase.firestore.DocumentSnapshot
 
@@ -91,6 +92,30 @@ fun DocumentSnapshot.toHackathon(): Hackathon? {
         )
     } catch (e: Exception) {
         Log.e("MAPPER_ERROR", "Error mapping Hackathon: ${e.message}")
+        null
+    }
+}
+
+fun DocumentSnapshot.toJobOpportunity(): JobOpportunity? {
+    return try {
+        JobOpportunity(
+            jobId = getString("jobId") ?: id,
+            recruiterId = getString("recruiterId") ?: "",
+            jobTitle = getString("jobTitle") ?: getString("title") ?: "",
+            companyName = getString("companyName") ?: "",
+            description = getString("description") ?: "",
+            workMode = getString("workMode") ?: "",
+            location = getString("city") ?: getString("location") ?: "",
+            experience = getString("experience") ?: "",
+            skills = (get("skills") as? List<String>) ?: (get("coreSkills") as? List<String>) ?: emptyList(),
+            jobFunction = getString("jobFunction") ?: "",
+            employmentType = getString("employmentType") ?: "",
+            salary = getString("salary") ?: getString("stipend") ?: "",
+            deadline = getDateSafe("deadline"),
+            createdAt = getDateSafe("createdAt")
+        )
+    } catch (e: Exception) {
+        Log.e("MAPPER_ERROR", "Error mapping JobOpportunity: ${e.message}")
         null
     }
 }
