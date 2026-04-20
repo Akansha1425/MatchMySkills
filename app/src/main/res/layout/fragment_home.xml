@@ -13,16 +13,30 @@
         <!-- HEADER -->
         <TextView
             android:id="@+id/tv_greeting"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
             android:layout_marginTop="32dp"
+            android:layout_marginEnd="16dp"
             android:text="Welcome back, Student 👋"
             android:textColor="#333333"
             android:textSize="22sp"
             android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/btn_profile"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_profile"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="24dp"
+            android:text="Profile"
+            app:icon="@android:drawable/ic_menu_myplaces"
+            app:layout_constraintBottom_toBottomOf="@id/tv_greeting"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tv_greeting" />
 
         <TextView
             android:id="@+id/tv_subtitle"

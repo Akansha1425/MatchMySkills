@@ -125,7 +125,7 @@ class OpportunityDetailActivity : AppCompatActivity() {
             "candidateMarks" to marks,
             "resumeUrl" to resumeUrl,
             "candidateReason" to reason,
-            "status" to "Applied",
+            "status" to "Pending",
             "appliedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
 

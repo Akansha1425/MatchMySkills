@@ -25,23 +25,53 @@ class ApplicantViewModel @Inject constructor(
     private val _updateState = MutableStateFlow<UiState<Unit>>(UiState.Empty)
     val updateState: StateFlow<UiState<Unit>> = _updateState
 
-    fun fetchApplicants(jobId: String?, status: String = "Pending") {
+    private var allApplicants: List<Application> = emptyList()
+    private var lastQuery: String = ""
+
+    fun fetchApplicants(jobId: String?, statuses: List<String> = emptyList()) {
         viewModelScope.launch {
             if (jobId != null && jobId != "null") {
-                repository.getApplicationsByJob(jobId, status).collectLatest { state ->
-                    _applicantsState.value = state
+                repository.getApplicationsByJob(jobId, statuses).collectLatest { state ->
+                    if (state is UiState.Success) {
+                        allApplicants = state.data.sortedByDescending { it.createdAt?.time ?: 0L }
+                        applySearchFilter(lastQuery)
+                    } else {
+                        _applicantsState.value = state
+                    }
                 }
             } else {
                 val recruiterId = authRepository.getCurrentUser()?.id
                 if (recruiterId != null) {
-                    repository.getApplicationsByRecruiter(recruiterId).collectLatest { state ->
-                        _applicantsState.value = state
+                    repository.getApplicationsByRecruiter(recruiterId, statuses).collectLatest { state ->
+                        if (state is UiState.Success) {
+                            allApplicants = state.data.sortedByDescending { it.createdAt?.time ?: 0L }
+                            applySearchFilter(lastQuery)
+                        } else {
+                            _applicantsState.value = state
+                        }
                     }
                 } else {
                     _applicantsState.value = UiState.Error("User not authenticated")
                 }
             }
         }
+    }
+
+    fun searchCandidates(query: String) {
+        lastQuery = query
+        applySearchFilter(query)
+    }
+
+    private fun applySearchFilter(query: String) {
+        if (query.isBlank()) {
+            _applicantsState.value = if (allApplicants.isEmpty()) UiState.Empty else UiState.Success(allApplicants)
+            return
+        }
+        val filtered = allApplicants.filter { 
+            it.candidateName.contains(query, ignoreCase = true) || 
+            it.candidateCollege.contains(query, ignoreCase = true)
+        }
+        _applicantsState.value = if (filtered.isEmpty()) UiState.Empty else UiState.Success(filtered)
     }
 
     fun updateStatus(applicationId: String, status: String) {

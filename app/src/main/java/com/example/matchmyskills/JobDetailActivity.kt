@@ -72,14 +72,29 @@ class JobDetailActivity : AppCompatActivity() {
         val etName = view.findViewById<TextInputEditText>(R.id.etName)
         val etEmail = view.findViewById<TextInputEditText>(R.id.etEmail)
         val etMarks = view.findViewById<TextInputEditText>(R.id.etMarks)
+        val etSkills = view.findViewById<TextInputEditText>(R.id.etSkills)
         val etResumeUrl = view.findViewById<TextInputEditText>(R.id.etResumeUrl)
         val etReason = view.findViewById<TextInputEditText>(R.id.etReason)
         val btnSubmit = view.findViewById<Button>(R.id.btnSubmitApplication)
+
+        // Autofill from profile
+        val userId = auth.currentUser?.uid
+        if (userId != null) {
+            db.collection("users").document(userId).get().addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    etName.setText(doc.getString("name"))
+                    etEmail.setText(doc.getString("email"))
+                    val skillsList = doc.get("skills") as? List<String>
+                    etSkills.setText(skillsList?.joinToString(", "))
+                }
+            }
+        }
 
         btnSubmit.setOnClickListener {
             val name = etName.text.toString().trim()
             val email = etEmail.text.toString().trim()
             val marks = etMarks.text.toString().trim()
+            val skills = etSkills.text.toString().trim()
             val resumeUrl = etResumeUrl.text.toString().trim()
             val reason = etReason.text.toString().trim()
 
@@ -91,7 +106,9 @@ class JobDetailActivity : AppCompatActivity() {
             btnSubmit.isEnabled = false
             btnSubmit.text = "Submitting..."
 
-            submitApplication(name, email, marks, resumeUrl, reason, dialog)
+            // Convert skills string to list
+            val skillsList = skills.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            submitApplication(name, email, marks, skillsList, resumeUrl, reason, dialog)
         }
 
         dialog.show()
@@ -101,12 +118,17 @@ class JobDetailActivity : AppCompatActivity() {
         name: String,
         email: String,
         marks: String,
+        candidateSkills: List<String>,
         resumeUrl: String,
         reason: String,
         dialog: BottomSheetDialog
     ) {
         val job = currentJob ?: return
         val applicantId = auth.currentUser?.uid ?: "unknown_user"
+
+        // Calculate dynamic match score based on the skills provided in the dialog
+        val scoreResult = com.example.matchmyskills.util.MatchingEngine.calculateMatchScore(candidateSkills, job)
+
         val applicationId = UUID.randomUUID().toString()
         val normalizedType = if (job.opportunityType.equals("INTERNSHIP", ignoreCase = true)) {
             "INTERNSHIP"
@@ -119,7 +141,7 @@ class JobDetailActivity : AppCompatActivity() {
             "applicationId" to applicationId,
             "opportunityId" to job.id,
             "externalOpportunityId" to job.id,
-            "jobId" to job.id, // Backward-compatible with existing recruiter-side queries
+            "jobId" to job.id,
             "opportunityType" to normalizedType,
             "source" to job.source,
             "opportunityTitle" to job.title,
@@ -134,8 +156,15 @@ class JobDetailActivity : AppCompatActivity() {
             "candidateMarks" to marks,
             "resumeUrl" to resumeUrl,
             "candidateReason" to reason,
-            "status" to "Applied",
-            "appliedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            "candidateSkills" to candidateSkills,
+            "matchScore" to scoreResult.matchScore,
+            "coreMatchCount" to scoreResult.coreMatchCount,
+            "optionalMatchCount" to scoreResult.optionalMatchCount,
+            "matchedSkills" to scoreResult.matchedSkills,
+            "missingSkills" to scoreResult.missingSkills,
+            "status" to "Pending",
+            "appliedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+            "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
 
         db.collection("applications")
@@ -145,6 +174,7 @@ class JobDetailActivity : AppCompatActivity() {
                 Toast.makeText(this, "Application Submitted Successfully!", Toast.LENGTH_LONG).show()
                 dialog.dismiss()
                 setAppliedState()
+                finish()
             }
             .addOnFailureListener { e ->
                 Toast.makeText(this, "Application Failed: ${e.message}", Toast.LENGTH_LONG).show()

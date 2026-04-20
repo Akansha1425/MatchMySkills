@@ -75,7 +75,7 @@ class DashboardViewModel @Inject constructor(
                                     totalApplicants = apps.size,
                                     shortlistedCount = apps.count { it.status == "Shortlisted" },
                                     rejectedCount = apps.count { it.status == "Rejected" },
-                                    pendingCount = apps.count { it.status == "Pending" }
+                                    pendingCount = apps.count { it.status == "Pending" || it.status == "Applied" }
                                 )
                             )
                         }

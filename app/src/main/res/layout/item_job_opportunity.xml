@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
@@ -57,6 +58,20 @@
             android:textSize="12sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvJobCompany" />
+
+        <TextView
+            android:id="@+id/tvTimeLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginStart="16dp"
+            android:drawablePadding="4dp"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="#888888"
+            app:drawableStartCompat="@android:drawable/ic_menu_recent_history"
+            app:layout_constraintStart_toEndOf="@id/tvJobLocation"
+            app:layout_constraintTop_toBottomOf="@id/tvJobCompany"
+            tools:text="3 days left" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

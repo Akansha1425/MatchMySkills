@@ -34,8 +34,8 @@ class ApplicantListFragment : Fragment(R.layout.fragment_applicant_list) {
         setupListeners()
         observeState()
 
-        val jobId = args.jobId
-        viewModel.fetchApplicants(jobId)
+        // Initial fetch: "All" tab logic (Pending + Applied)
+        fetchByTab(0)
     }
 
     private fun setupRecyclerView() {
@@ -51,6 +51,33 @@ class ApplicantListFragment : Fragment(R.layout.fragment_applicant_list) {
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
+
+        binding.tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
+                tab?.let { fetchByTab(it.position) }
+            }
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+        })
+
+        binding.etSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                viewModel.searchCandidates(s?.toString() ?: "")
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+    }
+
+    private fun fetchByTab(position: Int) {
+        val jobId = args.jobId
+        val statuses = when (position) {
+            0 -> emptyList() // "All" tab - shows everything
+            1 -> listOf("Shortlisted")
+            2 -> listOf("Rejected")
+            else -> emptyList()
+        }
+        viewModel.fetchApplicants(jobId, statuses)
     }
 
     private fun observeState() {

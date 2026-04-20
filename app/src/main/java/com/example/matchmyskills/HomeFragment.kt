@@ -150,6 +150,15 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 }
             }
         }
+
+        // 5. Set Click Listener for Profile Button
+        val btnProfile = view.findViewById<Button>(R.id.btn_profile)
+        btnProfile.setOnClickListener {
+            requireActivity().supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, StudentProfileFragment())
+                .addToBackStack(null)
+                .commit()
+        }
     }
 
     private fun isInternship(job: Job): Boolean {

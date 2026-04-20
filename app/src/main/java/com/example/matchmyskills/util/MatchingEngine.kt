@@ -16,33 +16,36 @@ object MatchingEngine {
         val normalizedCoreSkills = job.coreSkills.map { it.lowercase().trim() }.toSet()
         val normalizedOptionalSkills = job.optionalSkills.map { it.lowercase().trim() }.toSet()
 
-        val matchedCore = normalizedCoreSkills.count { it in normalizedCandidateSkills }
-        val matchedOptional = normalizedOptionalSkills.count { it in normalizedCandidateSkills }
+        // Total required skills
+        val allRequiredSkills = (job.coreSkills + job.optionalSkills).map { it.lowercase().trim() }.toSet()
+        val totalRequired = allRequiredSkills.size
 
-        val coreWeight = 0.7
-        val optionalWeight = 0.3
+        // Calculate matched skills
+        val matchedSkillsList = (job.coreSkills + job.optionalSkills).filter { 
+            it.lowercase().trim() in normalizedCandidateSkills 
+        }.distinct()
+        
+        val missingSkillsList = (job.coreSkills + job.optionalSkills).filter { 
+            it.lowercase().trim() !in normalizedCandidateSkills 
+        }.distinct()
 
-        val coreScore = if (normalizedCoreSkills.isNotEmpty()) {
-            (matchedCore.toDouble() / normalizedCoreSkills.size) * coreWeight
+        val matchedCount = matchedSkillsList.size
+        
+        // Strictly calculate percentage
+        val finalScore = if (totalRequired > 0) {
+            (matchedCount.toDouble() / totalRequired) * 100.0
         } else {
-            coreWeight // If no core skills required, give full weight
+            0.0
         }
-
-        val optionalScore = if (normalizedOptionalSkills.isNotEmpty()) {
-            (matchedOptional.toDouble() / normalizedOptionalSkills.size) * optionalWeight
-        } else {
-            optionalWeight // If no optional skills required, give full weight
-        }
-
-        val totalScore = (coreScore + optionalScore) * 100.0
-        val finalScore = totalScore.coerceIn(0.0, 100.0)
 
         return Application(
             jobId = job.id,
             candidateSkills = candidateSkills,
             matchScore = finalScore,
-            coreMatchCount = matchedCore,
-            optionalMatchCount = matchedOptional
+            coreMatchCount = matchedCount, // Using this as 'Total Matched' now
+            optionalMatchCount = totalRequired, // Using this as 'Total Required' now
+            matchedSkills = matchedSkillsList,
+            missingSkills = missingSkillsList
         )
     }
 

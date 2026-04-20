@@ -21,13 +21,16 @@ class ApplicationRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val applicationDao: ApplicationDao
 ) {
-    fun getApplicationsByJob(jobId: String, status: String): Flow<UiState<List<Application>>> = callbackFlow {
+    fun getApplicationsByJob(jobId: String, statuses: List<String> = emptyList()): Flow<UiState<List<Application>>> = callbackFlow {
         trySend(UiState.Loading)
-        val listener = firestore.collection("applications")
-            .whereEqualTo("jobId", jobId)
-            .whereEqualTo("status", status)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
+        var query: Query = firestore.collection("applications")
+            .whereEqualTo("opportunityId", jobId)
+            
+        if (statuses.isNotEmpty()) {
+            query = query.whereIn("status", statuses)
+        }
+        
+        val listener = query.addSnapshotListener { snapshot, error ->
                 if (FirebaseAuth.getInstance().currentUser == null) {
                     return@addSnapshotListener
                 }
@@ -47,12 +50,16 @@ class ApplicationRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    fun getApplicationsByRecruiter(recruiterId: String): Flow<UiState<List<Application>>> = callbackFlow {
+    fun getApplicationsByRecruiter(recruiterId: String, statuses: List<String> = emptyList()): Flow<UiState<List<Application>>> = callbackFlow {
         trySend(UiState.Loading)
-        val listener = firestore.collection("applications")
+        var query: Query = firestore.collection("applications")
             .whereEqualTo("recruiterId", recruiterId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
+            
+        if (statuses.isNotEmpty()) {
+            query = query.whereIn("status", statuses)
+        }
+            
+        val listener = query.addSnapshotListener { snapshot, error ->
                 if (FirebaseAuth.getInstance().currentUser == null) {
                     return@addSnapshotListener
                 }
