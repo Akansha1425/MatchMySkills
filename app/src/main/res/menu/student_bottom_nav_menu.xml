@@ -16,4 +16,8 @@
         android:id="@+id/nav_hackathons"
         android:icon="@android:drawable/ic_menu_compass"
         android:title="Hackathons" />
+    <item
+        android:id="@+id/nav_student_profile"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="Profile" />
 </menu>

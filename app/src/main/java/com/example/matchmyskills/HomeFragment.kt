@@ -5,13 +5,22 @@ import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Button
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.appcompat.app.AlertDialog
 import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
 import com.example.matchmyskills.model.Hackathon
 import com.example.matchmyskills.model.Job
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.formatter.PercentFormatter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.android.material.button.MaterialButton
+import android.content.Intent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -25,7 +34,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var tvHackathonsCount: TextView
     private lateinit var tvAppliedCountLabel: TextView
     private lateinit var progressApplied: ProgressBar
-    private lateinit var pbLoading: ProgressBar
+    private lateinit var chartJobs: PieChart
+    private lateinit var chartInternships: PieChart
+    private lateinit var chartHackathons: PieChart
+    private lateinit var tvGreeting: TextView
+    private lateinit var btnLogout: MaterialButton
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
@@ -38,14 +51,75 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         tvHackathonsCount = view.findViewById(R.id.tv_hackathons_count)
         tvAppliedCountLabel = view.findViewById(R.id.tv_applied_count_label)
         progressApplied = view.findViewById(R.id.progress_applied)
-        pbLoading = view.findViewById(R.id.pb_loading)
+        chartJobs = view.findViewById(R.id.chart_jobs)
+        chartInternships = view.findViewById(R.id.chart_internships)
+        chartHackathons = view.findViewById(R.id.chart_hackathons)
+        tvGreeting = view.findViewById(R.id.tv_greeting)
+        btnLogout = view.findViewById(R.id.btn_logout)
 
+        setupPieCharts()
+        loadUserName()
         loadDashboardData()
+        setupLogoutButton()
+    }
+
+    private fun setupPieCharts() {
+        chartJobs.setUsePercentValues(true)
+        chartInternships.setUsePercentValues(true)
+        chartHackathons.setUsePercentValues(true)
+
+        listOf(chartJobs, chartInternships, chartHackathons).forEach { chart ->
+            chart.description.isEnabled = false
+            chart.setTouchEnabled(false)
+            chart.isRotationEnabled = false
+            chart.animateY(1000)
+            chart.legend.isEnabled = false
+        }
+    }
+
+    private fun loadUserName() {
+        val userId = auth.currentUser?.uid ?: return
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val userName = doc.getString("name") ?: "Student"
+                    tvGreeting.text = "Welcome back, $userName 👋"
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("HomeFragment", "Error fetching user name", e)
+            }
+    }
+
+    private fun setupLogoutButton() {
+        btnLogout.setOnClickListener {
+            showLogoutConfirmation()
+        }
+    }
+
+    private fun showLogoutConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Yes") { _, _ ->
+                performLogout()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun performLogout() {
+        FirebaseAuth.getInstance().signOut()
+        val intent = Intent(requireActivity(), LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        requireActivity().finish()
     }
 
     private fun loadDashboardData() {
-        pbLoading.visibility = View.VISIBLE
-
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Fetch Firebase Jobs & Internships
@@ -81,17 +155,48 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     }
                 }
 
-                // Fetch Applications matching current user
-                val applicationsTask = async {
+                // Fetch Applications by type
+                val jobApplicationsTask = async {
                     try {
                         val userId = auth.currentUser?.uid ?: return@async 0
                         val snapshot = db.collection("applications")
                             .whereEqualTo("candidateId", userId)
+                            .whereEqualTo("opportunityType", "JOB")
                             .get()
                             .await()
                         snapshot.size()
                     } catch (e: Exception) {
-                        Log.e("HomeFragment", "Error fetching applications", e)
+                        Log.e("HomeFragment", "Error fetching job applications", e)
+                        0
+                    }
+                }
+
+                val internshipApplicationsTask = async {
+                    try {
+                        val userId = auth.currentUser?.uid ?: return@async 0
+                        val snapshot = db.collection("applications")
+                            .whereEqualTo("candidateId", userId)
+                            .whereEqualTo("opportunityType", "INTERNSHIP")
+                            .get()
+                            .await()
+                        snapshot.size()
+                    } catch (e: Exception) {
+                        Log.e("HomeFragment", "Error fetching internship applications", e)
+                        0
+                    }
+                }
+
+                val hackathonApplicationsTask = async {
+                    try {
+                        val userId = auth.currentUser?.uid ?: return@async 0
+                        val snapshot = db.collection("applications")
+                            .whereEqualTo("candidateId", userId)
+                            .whereEqualTo("opportunityType", "HACKATHON")
+                            .get()
+                            .await()
+                        snapshot.size()
+                    } catch (e: Exception) {
+                        Log.e("HomeFragment", "Error fetching hackathon applications", e)
                         0
                     }
                 }
@@ -112,7 +217,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 // Await all results
                 val (fbJobsCount, fbInternshipsCount) = firebaseJobsTask.await()
                 val fbHackathonsCount = firebaseHackathonsTask.await()
-                val appliedCount = applicationsTask.await()
+                val jobApplied = jobApplicationsTask.await()
+                val internshipApplied = internshipApplicationsTask.await()
+                val hackathonApplied = hackathonApplicationsTask.await()
                 
                 val extJobsCount = externalJobsTask.await()
                 val extInternshipsCount = externalInternshipsTask.await()
@@ -121,6 +228,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 val totalJobs = fbJobsCount + extJobsCount
                 val totalInternships = fbInternshipsCount + extInternshipsCount
                 val totalHackathons = fbHackathonsCount + extHackathonsCount
+                val totalApplications = jobApplied + internshipApplied + hackathonApplied
                 val totalOpportunities = totalJobs + totalInternships + totalHackathons
 
                 // Update UI on main thread
@@ -129,36 +237,51 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     tvInternshipsCount.text = totalInternships.toString()
                     tvHackathonsCount.text = totalHackathons.toString()
 
-                    tvAppliedCountLabel.text = "$appliedCount Applications / $totalOpportunities Total Opportunities"
+                    tvAppliedCountLabel.text = "$totalApplications Applications / $totalOpportunities Total Opportunities"
                     
                     if (totalOpportunities > 0) {
-                        // Calculate percentage out of 100 for progress bar
-                        val progress = ((appliedCount.toFloat() / totalOpportunities.toFloat()) * 100).toInt()
-                        // Cap at 100 just in case
+                        val progress = ((totalApplications.toFloat() / totalOpportunities.toFloat()) * 100).toInt()
                         progressApplied.progress = progress.coerceAtMost(100)
                     } else {
                         progressApplied.progress = 0
                     }
 
-                    pbLoading.visibility = View.GONE
+                    // Setup pie charts
+                    setupPieChart(chartJobs, jobApplied, totalJobs, "#1565C0")
+                    setupPieChart(chartInternships, internshipApplied, totalInternships, "#2E7D32")
+                    setupPieChart(chartHackathons, hackathonApplied, totalHackathons, "#EF6C00")
                 }
 
             } catch (e: Exception) {
                 Log.e("HomeFragment", "Error loading dashboard data", e)
-                withContext(Dispatchers.Main) {
-                    pbLoading.visibility = View.GONE
-                }
             }
         }
+    }
 
-        // 5. Set Click Listener for Profile Button
-        val btnProfile = view.findViewById<Button>(R.id.btn_profile)
-        btnProfile.setOnClickListener {
-            requireActivity().supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, StudentProfileFragment())
-                .addToBackStack(null)
-                .commit()
+    private fun setupPieChart(chart: PieChart, applied: Int, total: Int, color: String) {
+        val entries = mutableListOf<PieEntry>()
+        val notApplied = (total - applied).coerceAtLeast(0)
+
+        entries.add(PieEntry(applied.toFloat(), "Applied"))
+        if (notApplied > 0) {
+            entries.add(PieEntry(notApplied.toFloat(), "Not Applied"))
         }
+
+        val dataSet = PieDataSet(entries, "").apply {
+            val appliedColor = android.graphics.Color.parseColor(color)
+            val notAppliedColor = android.graphics.Color.parseColor("#E0E0E0")
+            setColors(if (notApplied > 0) listOf(appliedColor, notAppliedColor) else listOf(appliedColor))
+            valueFormatter = PercentFormatter()
+            valueTextSize = 12f
+            valueTextColor = android.graphics.Color.BLACK
+        }
+
+        val data = PieData(dataSet).apply {
+            setValueFormatter(PercentFormatter())
+        }
+
+        chart.data = data
+        chart.invalidate()
     }
 
     private fun isInternship(job: Job): Boolean {

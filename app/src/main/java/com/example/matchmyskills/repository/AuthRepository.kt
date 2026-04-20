@@ -123,13 +123,12 @@ class AuthRepository @Inject constructor(
         try {
             val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
                 .child("profiles/$userId.jpg")
-            
+
             storageRef.putFile(uri).await()
             val downloadUrl = storageRef.downloadUrl.await().toString()
-            
-            // Also update the user document with the new URL
+
             firestore.collection("users").document(userId).update("profileImageUrl", downloadUrl).await()
-            
+
             trySend(UiState.Success(downloadUrl))
         } catch (e: Exception) {
             trySend(UiState.Error(e.message ?: "Failed to upload image"))
