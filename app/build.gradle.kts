@@ -82,6 +82,7 @@ dependencies {
     ksp(libs.glide.compiler)
     implementation(libs.mpandroidchart)
     implementation(libs.gson)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Networking & Scraping
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

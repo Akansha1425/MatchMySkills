@@ -2,11 +2,13 @@ package com.example.matchmyskills
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.example.matchmyskills.notifications.NotificationPermissionHelper
 
 class StudentDashboard : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_student_dashboard)
+        NotificationPermissionHelper.requestIfNeeded(this)
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()

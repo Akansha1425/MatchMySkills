@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.matchmyskills.repository.AuthRepository
+import com.example.matchmyskills.background.OpportunitySyncScheduler
 import com.example.matchmyskills.AdminDashboard
 import com.example.matchmyskills.StudentDashboard
 import com.google.firebase.auth.FirebaseAuth
@@ -74,6 +75,7 @@ class SplashActivity : AppCompatActivity() {
                             navigateToDestination(MainActivity::class.java)
                         }
                     } else if (role == "student") {
+                        OpportunitySyncScheduler.scheduleLoginDeadlineCheck(this)
                         navigateToDestination(StudentDashboard::class.java)
                     } else if (role == "admin") {
                         navigateToDestination(AdminDashboard::class.java)
