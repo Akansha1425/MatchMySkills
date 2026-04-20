@@ -6,7 +6,7 @@ import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,7 +16,7 @@ import com.example.matchmyskills.model.Job
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
-class JobActivity : AppCompatActivity() {
+class JobFragment : Fragment(R.layout.fragment_job) {
 
     private lateinit var rvJobs: RecyclerView
     private lateinit var progressBarJobs: ProgressBar
@@ -26,17 +26,16 @@ class JobActivity : AppCompatActivity() {
     private var externalJobs: List<Job> = emptyList()
     private var pendingSources: Int = 0
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_job)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        rvJobs = findViewById(R.id.rvJobs)
-        progressBarJobs = findViewById(R.id.progressBarJobs)
+        rvJobs = view.findViewById(R.id.rvJobs)
+        progressBarJobs = view.findViewById(R.id.progressBarJobs)
 
-        rvJobs.layoutManager = LinearLayoutManager(this)
+        rvJobs.layoutManager = LinearLayoutManager(requireContext())
         
         jobOpportunityAdapter = JobOpportunityAdapter(emptyList()) { selectedJob ->
-            val intent = Intent(this, JobDetailActivity::class.java).apply {
+            val intent = Intent(requireActivity(), JobDetailActivity::class.java).apply {
                 putExtra("EXTRA_JOB", selectedJob)
             }
             startActivity(intent)
@@ -64,7 +63,7 @@ class JobActivity : AppCompatActivity() {
                         )
                         jobList.add(job)
                     } catch (e: Exception) {
-                        Log.e("JobActivity", "Error parsing doc ${doc.id}", e)
+                        Log.e("JobFragment", "Error parsing doc ${doc.id}", e)
                     }
                 }
                 firebaseJobs = jobList
@@ -73,10 +72,10 @@ class JobActivity : AppCompatActivity() {
             .addOnFailureListener { e ->
                 firebaseJobs = emptyList()
                 onSourceLoaded()
-                Toast.makeText(this, "Failed to load Firebase jobs: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to load Firebase jobs: ${e.message}", Toast.LENGTH_SHORT).show()
             }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             externalJobs = ExternalOpportunityDataSource.fetchJobs(
                 keyword = "software",
                 type = "JOB"

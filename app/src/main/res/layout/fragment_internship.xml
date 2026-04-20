@@ -4,30 +4,30 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".JobActivity">
+    tools:context=".InternshipFragment">
 
     <TextView
-        android:id="@+id/tvJobsHeader"
+        android:id="@+id/tvInternshipsHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:text="Available Jobs"
+        android:text="Available Internships"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvJobs"
+        android:id="@+id/rvInternships"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvJobsHeader"
-        tools:listitem="@layout/item_job" />
+        app:layout_constraintTop_toBottomOf="@id/tvInternshipsHeader"
+        tools:listitem="@layout/item_job_opportunity" />
 
     <ProgressBar
-        android:id="@+id/progressBarJobs"
+        android:id="@+id/progressBarInternships"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"

@@ -8,12 +8,29 @@ class StudentDashboard : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_student_dashboard)
 
-        // Check if the activity is newly created (savedInstanceState == null)
-        // If it is, load the HomeFragment.
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, HomeFragment())
                 .commit()
+        }
+
+        val bottomNav = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        bottomNav.setOnItemSelectedListener { item ->
+            val fragment = when (item.itemId) {
+                R.id.nav_home -> HomeFragment()
+                R.id.nav_jobs -> JobFragment()
+                R.id.nav_internships -> InternshipFragment()
+                R.id.nav_hackathons -> HackathonFragment()
+                else -> null
+            }
+            if (fragment != null) {
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .commit()
+                true
+            } else {
+                false
+            }
         }
 
         findViewById<android.view.View>(R.id.btnLogout).setOnClickListener {

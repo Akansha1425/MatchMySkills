@@ -6,7 +6,7 @@ import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,7 +16,7 @@ import com.example.matchmyskills.model.Hackathon
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
-class HackathonActivity : AppCompatActivity() {
+class HackathonFragment : Fragment(R.layout.fragment_hackathon) {
 
     private lateinit var rvHackathons: RecyclerView
     private lateinit var progressBar: ProgressBar
@@ -26,17 +26,16 @@ class HackathonActivity : AppCompatActivity() {
     private var externalHackathons: List<Hackathon> = emptyList()
     private var pendingSources: Int = 0
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_hackathon)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        rvHackathons = findViewById(R.id.rvHackathons)
-        progressBar = findViewById(R.id.progressBar)
+        rvHackathons = view.findViewById(R.id.rvHackathons)
+        progressBar = view.findViewById(R.id.progressBar)
 
-        rvHackathons.layoutManager = LinearLayoutManager(this)
+        rvHackathons.layoutManager = LinearLayoutManager(requireContext())
         
         hackathonAdapter = HackathonAdapter(emptyList()) { selectedHackathon ->
-            val intent = Intent(this, OpportunityDetailActivity::class.java).apply {
+            val intent = Intent(requireActivity(), OpportunityDetailActivity::class.java).apply {
                 putExtra("EXTRA_HACKATHON", selectedHackathon)
             }
             startActivity(intent)
@@ -64,7 +63,7 @@ class HackathonActivity : AppCompatActivity() {
                         )
                         hackathonList.add(hackathon)
                     } catch (e: Exception) {
-                        Log.e("HackathonActivity", "Error parsing doc ${doc.id}", e)
+                        Log.e("HackathonFragment", "Error parsing doc ${doc.id}", e)
                     }
                 }
                 firebaseHackathons = hackathonList
@@ -73,10 +72,10 @@ class HackathonActivity : AppCompatActivity() {
             .addOnFailureListener { e ->
                 firebaseHackathons = emptyList()
                 onSourceLoaded()
-                Toast.makeText(this, "Failed to load Firebase hackathons: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to load Firebase hackathons: ${e.message}", Toast.LENGTH_SHORT).show()
             }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             externalHackathons = ExternalOpportunityDataSource.fetchHackathons()
             onSourceLoaded()
         }

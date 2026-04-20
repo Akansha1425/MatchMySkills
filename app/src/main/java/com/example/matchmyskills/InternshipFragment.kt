@@ -6,7 +6,7 @@ import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,7 +16,7 @@ import com.example.matchmyskills.model.Job
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
-class InternshipActivity : AppCompatActivity() {
+class InternshipFragment : Fragment(R.layout.fragment_internship) {
 
     private lateinit var rvInternships: RecyclerView
     private lateinit var progressBarInternships: ProgressBar
@@ -27,16 +27,15 @@ class InternshipActivity : AppCompatActivity() {
     private var externalInternships: List<Job> = emptyList()
     private var pendingSources: Int = 0
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_internship)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        rvInternships = findViewById(R.id.rvInternships)
-        progressBarInternships = findViewById(R.id.progressBarInternships)
+        rvInternships = view.findViewById(R.id.rvInternships)
+        progressBarInternships = view.findViewById(R.id.progressBarInternships)
 
-        rvInternships.layoutManager = LinearLayoutManager(this)
+        rvInternships.layoutManager = LinearLayoutManager(requireContext())
         internshipAdapter = JobOpportunityAdapter(emptyList()) { selectedInternship ->
-            val intent = Intent(this, JobDetailActivity::class.java).apply {
+            val intent = Intent(requireActivity(), JobDetailActivity::class.java).apply {
                 putExtra("EXTRA_JOB", selectedInternship)
             }
             startActivity(intent)
@@ -67,7 +66,7 @@ class InternshipActivity : AppCompatActivity() {
                             )
                         }
                     } catch (e: Exception) {
-                        Log.e("InternshipActivity", "Error parsing doc ${doc.id}", e)
+                        Log.e("InternshipFragment", "Error parsing doc ${doc.id}", e)
                     }
                 }
                 firebaseInternships = internships
@@ -76,10 +75,10 @@ class InternshipActivity : AppCompatActivity() {
             .addOnFailureListener { e ->
                 firebaseInternships = emptyList()
                 onSourceLoaded()
-                Toast.makeText(this, "Failed to load Firebase internships: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to load Firebase internships: ${e.message}", Toast.LENGTH_SHORT).show()
             }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             externalInternships = ExternalOpportunityDataSource.fetchJobs(
                 keyword = "internship",
                 type = "INTERNSHIP"
