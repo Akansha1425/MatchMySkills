@@ -3,6 +3,7 @@ package com.example.matchmyskills.ui.profile
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,6 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.matchmyskills.LoginActivity
 import com.example.matchmyskills.R
 import com.example.matchmyskills.databinding.FragmentProfileBinding
@@ -18,6 +20,7 @@ import com.example.matchmyskills.model.User
 import com.example.matchmyskills.repository.AuthRepository
 import com.example.matchmyskills.util.UiState
 import com.example.matchmyskills.viewmodel.AuthViewModel
+import com.example.matchmyskills.viewmodel.DashboardViewModel
 import com.google.android.material.chip.Chip
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
@@ -30,6 +33,7 @@ import javax.inject.Inject
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     private val viewModel: AuthViewModel by viewModels()
+    private val dashboardViewModel: DashboardViewModel by viewModels()
 
     @Inject
     lateinit var authRepository: AuthRepository
@@ -37,6 +41,14 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
     private var currentUser: User? = null
+
+    private val requestLocationPermission = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            fetchLocation()
+        }
+    }
 
     private val imagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { viewModel.uploadProfileImage(it) }
@@ -49,7 +61,20 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         setupListeners()
         observeProfile()
         observeImageUpload()
+        observeDashboardState()
         viewModel.observeProfile()
+        dashboardViewModel.fetchDashboardData()
+    }
+
+    private fun observeDashboardState() {
+        dashboardViewModel.dashboardState.onEach { state ->
+            if (state is UiState.Success) {
+                val data = state.data
+                binding.tvStatJobs.text = data.jobs.size.toString()
+                binding.tvStatHires.text = data.hiredCount.toString()
+                binding.tvStatApps.text = data.totalApplicants.toString()
+            }
+        }.launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
     private fun observeProfile() {
@@ -71,49 +96,73 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     }
 
     private fun bindUserData(user: User) {
-        with(binding) {
-            tvCompanyName.text = user.companyName ?: "Add Company Name"
-            tvEmail.text = user.email
-            tvLocation.text = user.location ?: "Not specified"
-            tvCompanySize.text = user.companySize ?: "Not specified"
-            tvRecruiterName.text = user.name ?: "Add Name"
-            tvJobTitle.text = user.jobTitle ?: "Add Job Title"
-            tvBio.text = user.bio ?: "Add a professional bio to attract candidates"
-            
-            layoutVerified.isVisible = user.isVerified
-            
-            user.memberSince?.let {
-                val sdf = SimpleDateFormat("MMM yyyy", Locale.getDefault())
-                tvMemberSince.text = sdf.format(it)
-            } ?: run {
-                tvMemberSince.text = "Joined Jan 2026"
-            }
+        if (!isAdded) {
+            Log.w("ProfileFragment_Image", "Fragment not attached during bindUserData")
+            return
+        }
 
-            // Load Profile Image
-            Glide.with(this@ProfileFragment)
-                .load(user.profileImageUrl)
-                .placeholder(R.drawable.ic_profile)
-                .error(R.drawable.ic_profile)
-                .into(ivProfile)
+        try {
+            with(binding) {
+                tvCompanyName.text = user.companyName ?: "Add Company Name"
+                tvEmail.text = user.email
+                tvLocation.text = user.location ?: "Not specified"
+                tvCompanySize.text = user.companySize ?: "Not specified"
+                tvRecruiterName.text = user.name ?: "Add Name"
+                tvJobTitle.text = user.jobTitle ?: "Add Job Title"
+                tvBio.text = user.bio ?: "Add a professional bio to attract candidates"
+                
+                layoutVerified.isVisible = user.isVerified
+                
+                user.memberSince?.let {
+                    val sdf = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+                    tvMemberSince.text = sdf.format(it)
+                } ?: run {
+                    tvMemberSince.text = "Joined Jan 2026"
+                }
 
-            // Dynamic Chips
-            chipGroupTags.removeAllViews()
-            user.hiringTags.forEach { tag ->
-                val chip = Chip(requireContext()).apply {
-                    text = tag
-                    isClickable = false
-                    isCheckable = false
-                    setChipBackgroundColorResource(R.color.matchmyskills_divider)
+                // Load Profile Image safely
+                Log.d("ProfileFragment_Image", "Binding user data - ProfileImageUrl: ${user.profileImageUrl}")
+                if (!user.profileImageUrl.isNullOrBlank()) {
+                    Log.d("ProfileFragment_Image", "Loading profile image from URL: ${user.profileImageUrl}")
+                    Glide.with(this@ProfileFragment)
+                        .load(user.profileImageUrl)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .placeholder(R.drawable.ic_profile)
+                        .error(R.drawable.ic_profile)
+                        .into(ivProfile)
+                } else {
+                    Log.d("ProfileFragment_Image", "Profile image URL is null/blank, using placeholder")
+                    ivProfile.setImageResource(R.drawable.ic_profile)
                 }
-                chipGroupTags.addView(chip)
-            }
-            if (user.hiringTags.isEmpty()) {
-                val emptyChip = Chip(requireContext()).apply {
-                    text = "+ Add Tags"
-                    setOnClickListener { showEditProfileDialog() }
+
+                if (user.location.isNullOrBlank()) {
+                    checkLocationPermission()
+                } else {
+                    tvLocation.text = user.location
                 }
-                chipGroupTags.addView(emptyChip)
+
+                // Dynamic Chips
+                chipGroupTags.removeAllViews()
+                user.hiringTags.forEach { tag ->
+                    val chip = Chip(requireContext()).apply {
+                        text = tag
+                        isClickable = false
+                        isCheckable = false
+                        setChipBackgroundColorResource(R.color.matchmyskills_divider)
+                    }
+                    chipGroupTags.addView(chip)
+                }
+                if (user.hiringTags.isEmpty()) {
+                    val emptyChip = Chip(requireContext()).apply {
+                        text = "+ Add Tags"
+                        setOnClickListener { showEditProfileDialog() }
+                    }
+                    chipGroupTags.addView(emptyChip)
+                }
             }
+        } catch (e: Exception) {
+            Log.e("ProfileFragment_Image", "Error in bindUserData", e)
+            Toast.makeText(context, "Error binding profile data: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -164,6 +213,29 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         currentUser?.let {
             EditProfileBottomSheet(it).show(parentFragmentManager, EditProfileBottomSheet.TAG)
         }
+    }
+
+    private fun checkLocationPermission() {
+        if (com.example.matchmyskills.util.LocationHelper.isLocationPermissionGranted(requireContext())) {
+            fetchLocation()
+        } else {
+            requestLocationPermission.launch(com.example.matchmyskills.util.LocationHelper.getRequiredPermissions()[0])
+        }
+    }
+
+    private fun fetchLocation() {
+        com.example.matchmyskills.util.LocationHelper.fetchLocation(requireContext(), object : com.example.matchmyskills.util.LocationHelper.LocationCallback {
+            override fun onLocationFetched(city: String, state: String) {
+                val loc = "$city, $state"
+                binding.tvLocation.text = loc
+                // Update profile with detected location
+                viewModel.updateProfile(mapOf("location" to loc))
+            }
+
+            override fun onLocationError(message: String) {
+                binding.tvLocation.text = "Location unavailable"
+            }
+        })
     }
 
     override fun onDestroyView() {

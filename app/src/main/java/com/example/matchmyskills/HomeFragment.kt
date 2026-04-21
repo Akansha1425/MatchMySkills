@@ -7,6 +7,8 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ImageView
+import com.bumptech.glide.Glide
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -43,6 +45,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var tvGreeting: TextView
     private lateinit var btnLogout: MaterialButton
     private lateinit var locationText: TextView
+    private lateinit var ivProfileDashboard: android.widget.ImageView
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
@@ -73,11 +76,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         tvGreeting = view.findViewById(R.id.tv_greeting)
         btnLogout = view.findViewById(R.id.btn_logout)
         locationText = view.findViewById(R.id.location_text)
-
+        ivProfileDashboard = view.findViewById(R.id.iv_profile_dashboard)
+        
         setupPieCharts()
-        loadUserName()
+        loadUserDetails()
         loadDashboardData()
-        setupLogoutButton()
         
         // Request and fetch location
         requestLocationPermission()
@@ -96,8 +99,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private fun fetchLocation() {
         LocationHelper.fetchLocation(requireContext(), object : LocationHelper.LocationCallback {
             override fun onLocationFetched(city: String, state: String) {
-                locationText.text = "📍 $city, $state"
+                val loc = "📍 $city, $state"
+                locationText.text = loc
                 Log.d("LocationFetched", "Location: $city, $state")
+                
+                // Save to Firestore so other pages (like Profile) can see it
+                saveLocationToFirestore("$city, $state")
             }
 
             override fun onLocationError(message: String) {
@@ -105,6 +112,17 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 Log.e("LocationError", message)
             }
         })
+    }
+
+    private fun saveLocationToFirestore(location: String) {
+        val userId = auth.currentUser?.uid ?: return
+        db.collection("users").document(userId).update("location", location)
+            .addOnSuccessListener {
+                Log.d("HomeFragment", "Location updated in Firestore")
+            }
+            .addOnFailureListener { e ->
+                Log.e("HomeFragment", "Failed to update location", e)
+            }
     }
 
     private fun setupPieCharts() {
@@ -121,17 +139,27 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         }
     }
 
-    private fun loadUserName() {
+    private fun loadUserDetails() {
         val userId = auth.currentUser?.uid ?: return
         db.collection("users").document(userId).get()
             .addOnSuccessListener { doc ->
-                if (doc.exists()) {
+                if (doc.exists() && isAdded) {
                     val userName = doc.getString("name") ?: "Student"
                     tvGreeting.text = "Welcome back, $userName 👋"
+                    
+                    val profileImageUrl = doc.getString("profileImage")
+                    if (!profileImageUrl.isNullOrBlank()) {
+                        Glide.with(this)
+                            .load(profileImageUrl)
+                            .placeholder(R.drawable.ic_profile)
+                            .error(R.drawable.ic_profile)
+                            .circleCrop()
+                            .into(ivProfileDashboard)
+                    }
                 }
             }
             .addOnFailureListener { e ->
-                Log.e("HomeFragment", "Error fetching user name", e)
+                Log.e("HomeFragment", "Error fetching user details", e)
             }
     }
 

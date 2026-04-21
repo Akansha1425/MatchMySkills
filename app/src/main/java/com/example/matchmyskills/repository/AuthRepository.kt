@@ -59,6 +59,14 @@ class AuthRepository @Inject constructor(
         return prefs.getString("user_role", null)
     }
 
+    fun setLoggedIn(isLoggedIn: Boolean) {
+        prefs.edit().putBoolean("is_logged_in", isLoggedIn).apply()
+    }
+
+    fun isLoggedIn(): Boolean {
+        return prefs.getBoolean("is_logged_in", false)
+    }
+
     fun clearUserData() {
         prefs.edit().clear().apply()
         auth.signOut()

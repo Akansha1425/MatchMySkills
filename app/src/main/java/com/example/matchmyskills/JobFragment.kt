@@ -25,6 +25,7 @@ class JobFragment : Fragment(R.layout.fragment_job) {
     private val db = FirebaseFirestore.getInstance()
     private var firebaseJobs: List<Job> = emptyList()
     private var externalJobs: List<Job> = emptyList()
+    private var allMergedJobs: List<Job> = emptyList()
     private var pendingSources: Int = 0
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -32,6 +33,7 @@ class JobFragment : Fragment(R.layout.fragment_job) {
 
         rvJobs = view.findViewById(R.id.rvJobs)
         progressBarJobs = view.findViewById(R.id.progressBarJobs)
+        val etSearch = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSearch)
 
         rvJobs.layoutManager = LinearLayoutManager(requireContext())
         
@@ -43,6 +45,14 @@ class JobFragment : Fragment(R.layout.fragment_job) {
         }
         rvJobs.adapter = jobOpportunityAdapter
 
+        etSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterJobs(s?.toString() ?: "")
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
         fetchJobs()
     }
 
@@ -50,21 +60,18 @@ class JobFragment : Fragment(R.layout.fragment_job) {
         progressBarJobs.visibility = View.VISIBLE
         pendingSources = 2
 
+        // Fetching without strict status/type to ensure manual/legacy jobs are visible
         db.collection("jobs")
-            .whereEqualTo("status", "Active")
             .get()
             .addOnSuccessListener { documents ->
                 val jobList = mutableListOf<Job>()
                 for (doc in documents) {
                     try {
                         val parsed = doc.toJob()
-                        if (parsed != null) {
-                            jobList.add(
-                                parsed.copy(
-                                    opportunityType = parsed.opportunityType.ifBlank { "JOB" },
-                                    source = parsed.source.ifBlank { "FIREBASE" }
-                                )
-                            )
+                        // Local filter: Must be Active (default) and NOT internship
+                        if (parsed != null && parsed.status == "Active" && 
+                            !parsed.opportunityType.equals("INTERNSHIP", ignoreCase = true)) {
+                            jobList.add(parsed)
                         }
                     } catch (e: Exception) {
                         Log.e("JobFragment", "Error parsing doc ${doc.id}", e)
@@ -78,7 +85,6 @@ class JobFragment : Fragment(R.layout.fragment_job) {
                 Log.e("JobFragment", "Failed to load Firebase jobs", e)
                 firebaseJobs = emptyList()
                 onSourceLoaded()
-                Toast.makeText(requireContext(), "Failed to load Firebase jobs: ${e.message}", Toast.LENGTH_SHORT).show()
             }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -87,9 +93,7 @@ class JobFragment : Fragment(R.layout.fragment_job) {
                     keyword = "software",
                     type = "JOB"
                 )
-                Log.d("JobFragment", "Loaded ${externalJobs.size} external jobs")
             } catch (e: Exception) {
-                Log.e("JobFragment", "Failed to load external jobs", e)
                 externalJobs = emptyList()
             } finally {
                 onSourceLoaded()
@@ -103,10 +107,24 @@ class JobFragment : Fragment(R.layout.fragment_job) {
 
         progressBarJobs.visibility = View.GONE
 
-        val merged = (firebaseJobs + externalJobs)
+        allMergedJobs = (firebaseJobs + externalJobs)
             .distinctBy { it.id }
 
-        Log.d("JobFragment", "Updating adapter with ${merged.size} jobs")
-        jobOpportunityAdapter.updateData(merged)
+        jobOpportunityAdapter.updateData(allMergedJobs)
+    }
+
+    private fun filterJobs(query: String) {
+        if (query.isEmpty()) {
+            jobOpportunityAdapter.updateData(allMergedJobs)
+            return
+        }
+
+        val filtered = allMergedJobs.filter {
+            it.title.contains(query, ignoreCase = true) ||
+            it.companyName.contains(query, ignoreCase = true) ||
+            it.description.contains(query, ignoreCase = true) ||
+            it.location.contains(query, ignoreCase = true)
+        }
+        jobOpportunityAdapter.updateData(filtered)
     }
 }

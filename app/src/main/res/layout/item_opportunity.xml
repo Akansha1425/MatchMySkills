@@ -19,8 +19,23 @@
             android:layout_height="wrap_content"
             android:textSize="20sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tvType"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_rounded_tag"
+            android:backgroundTint="#F3E5F5"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:text="Hackathon"
+            android:textColor="#9C27B0"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView

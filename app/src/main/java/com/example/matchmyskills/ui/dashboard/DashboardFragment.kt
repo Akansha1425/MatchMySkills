@@ -20,11 +20,13 @@ import com.example.matchmyskills.viewmodel.DashboardViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import com.example.matchmyskills.viewmodel.AuthViewModel
 
 @AndroidEntryPoint
 class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
 
     private val viewModel: DashboardViewModel by viewModels()
+    private val authViewModel: AuthViewModel by viewModels()
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
 
@@ -67,8 +69,11 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
     private fun fetchLocation() {
         LocationHelper.fetchLocation(requireContext(), object : LocationHelper.LocationCallback {
             override fun onLocationFetched(city: String, state: String) {
-                binding.locationText.text = "📍 $city, $state"
-                Log.d("LocationFetched", "Location: $city, $state")
+                val loc = "$city, $state"
+                binding.locationText.text = "📍 $loc"
+                Log.d("LocationFetched", "Location: $loc")
+                // Save to profile so it's visible on Profile Page
+                authViewModel.updateProfile(mapOf("location" to loc))
             }
 
             override fun onLocationError(message: String) {
@@ -124,7 +129,7 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
                 }
                 is UiState.Empty -> {
                     adapter.submitList(emptyList())
-                    updateStats(DashboardViewModel.DashboardData(emptyList(), emptyList(), 0, 0, 0, 0))
+                    updateStats(DashboardViewModel.DashboardData(emptyList(), emptyList(), 0, 0, 0, 0, 0))
                     binding.rvJobs.visibility = View.GONE
                     binding.layoutEmptyState.visibility = View.VISIBLE
                 }

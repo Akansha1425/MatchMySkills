@@ -68,11 +68,6 @@ class LoginActivity : AppCompatActivity() {
                         selectedRole = "recruiter"
                         socialLayout.visibility = View.VISIBLE
                     }
-                    R.id.btnAdmin -> {
-                        tvTitle.text = "Admin Panel"
-                        selectedRole = "admin"
-                        socialLayout.visibility = View.GONE
-                    }
                 }
             }
         }
@@ -141,6 +136,7 @@ class LoginActivity : AppCompatActivity() {
         }
 
         repository.saveUserRole(role)
+        repository.setLoggedIn(true)
 
         when (role) {
             "recruiter" -> {
@@ -152,13 +148,6 @@ class LoginActivity : AppCompatActivity() {
             }
             "student" -> {
                 val intent = Intent(this, StudentDashboard::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                }
-                startActivity(intent)
-                finish()
-            }
-            "admin" -> {
-                val intent = Intent(this, AdminDashboard::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
                 startActivity(intent)

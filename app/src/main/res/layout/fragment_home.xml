@@ -59,23 +59,20 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/location_header" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_logout"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/iv_profile_dashboard"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
             android:layout_marginEnd="24dp"
-            android:padding="0dp"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            app:icon="@android:drawable/ic_menu_help"
-            app:iconGravity="textStart"
-            app:cornerRadius="24dp"
-            app:layout_constraintBottom_toBottomOf="@id/tv_greeting"
+            android:padding="2dp"
+            app:strokeWidth="2dp"
+            app:strokeColor="?attr/colorPrimary"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_profile"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/tv_greeting" />
+            app:layout_constraintTop_toTopOf="@id/tv_greeting"
+            app:layout_constraintBottom_toBottomOf="@id/tv_greeting" />
 
         <TextView
             android:id="@+id/tv_subtitle"

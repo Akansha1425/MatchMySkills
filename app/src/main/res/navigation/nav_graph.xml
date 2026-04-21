@@ -41,6 +41,9 @@
         android:id="@+id/candidatesFragment"
         android:name="com.example.matchmyskills.ui.candidates.ApplicantListFragment"
         android:label="Candidates">
+        <action
+            android:id="@+id/action_applicantListFragment_to_applicantDetailFragment"
+            app:destination="@id/applicantDetailFragment" />
         <argument
             android:name="jobId"
             android:defaultValue="@null"
@@ -82,8 +85,8 @@
         android:name="com.example.matchmyskills.ui.candidates.ApplicantDetailFragment"
         android:label="Applicant Details">
         <argument
-            android:name="application"
-            app:argType="com.example.matchmyskills.model.Application" />
+            android:name="applicationId"
+            app:argType="string" />
     </fragment>
 
     <fragment

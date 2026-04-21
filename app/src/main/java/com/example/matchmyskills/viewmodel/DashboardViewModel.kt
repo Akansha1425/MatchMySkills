@@ -33,7 +33,8 @@ class DashboardViewModel @Inject constructor(
         val totalApplicants: Int,
         val shortlistedCount: Int,
         val rejectedCount: Int,
-        val pendingCount: Int
+        val pendingCount: Int,
+        val hiredCount: Int
     )
 
     init {
@@ -75,7 +76,8 @@ class DashboardViewModel @Inject constructor(
                                     totalApplicants = apps.size,
                                     shortlistedCount = apps.count { it.status == "Shortlisted" },
                                     rejectedCount = apps.count { it.status == "Rejected" },
-                                    pendingCount = apps.count { it.status == "Pending" || it.status == "Applied" }
+                                    pendingCount = apps.count { it.status == "Pending" || it.status == "Applied" },
+                                    hiredCount = apps.count { it.status == "Hired" }
                                 )
                             )
                         }

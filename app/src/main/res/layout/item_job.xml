@@ -19,10 +19,21 @@
             android:layout_height="wrap_content"
             android:textAppearance="?attr/textAppearanceTitleLarge"
             android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@id/chip_status"
+            app:layout_constraintEnd_toStartOf="@id/chip_type"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Software Engineering Intern" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_type"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            app:chipBackgroundColor="@color/matchmyskills_primary_container"
+            app:layout_constraintEnd_toStartOf="@id/chip_status"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Job" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_status"

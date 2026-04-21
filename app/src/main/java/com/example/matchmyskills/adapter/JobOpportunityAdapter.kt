@@ -20,6 +20,7 @@ class JobOpportunityAdapter(
         val tvJobSkills: TextView = itemView.findViewById(R.id.tvJobSkills)
         val tvJobStipend: TextView = itemView.findViewById(R.id.tvJobStipend)
         val tvTimeLeft: TextView = itemView.findViewById(R.id.tvTimeLeft)
+        val tvJobType: TextView = itemView.findViewById(R.id.tvJobType)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): JobViewHolder {
@@ -58,6 +59,17 @@ class JobOpportunityAdapter(
             holder.tvTimeLeft.visibility = View.VISIBLE
         } else {
             holder.tvTimeLeft.visibility = View.GONE
+        }
+
+        // Set Type Label
+        val type = job.opportunityType
+        holder.tvJobType.text = if (type.equals("INTERNSHIP", ignoreCase = true)) "Internship" else "Job"
+        if (type.equals("INTERNSHIP", ignoreCase = true)) {
+            holder.tvJobType.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#E8F5E9"))
+            holder.tvJobType.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+        } else {
+            holder.tvJobType.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#E3F2FD"))
+            holder.tvJobType.setTextColor(android.graphics.Color.parseColor("#2196F3"))
         }
 
         holder.itemView.setOnClickListener {

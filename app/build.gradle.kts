@@ -97,6 +97,9 @@ dependencies {
     // Location Services
     implementation("com.google.android.gms:play-services-location:21.1.0")
 
+    // Cloudinary
+    implementation("com.cloudinary:cloudinary-android:2.3.1")
+
     // Testing
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

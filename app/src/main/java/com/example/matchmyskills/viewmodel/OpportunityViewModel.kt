@@ -153,6 +153,7 @@ class OpportunityViewModel @Inject constructor(
                 city = location,
                 stipend = salary,
                 deadline = deadline,
+                status = "Active",
                 opportunityType = "JOB",
                 source = "FIREBASE"
             )

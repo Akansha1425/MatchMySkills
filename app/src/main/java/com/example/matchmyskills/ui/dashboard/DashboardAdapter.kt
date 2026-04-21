@@ -61,6 +61,7 @@ class DashboardAdapter(
                     job.companyName
                 }
 
+                chipType.text = if (job.opportunityType.equals("INTERNSHIP", ignoreCase = true)) "Internship" else "Job"
                 chipStatus.text = job.status
                 tvApplicants.text = "View Applicants"
 
@@ -98,6 +99,7 @@ class DashboardAdapter(
                     hackathon.organizer
                 }
 
+                chipType.text = "Hackathon"
                 chipStatus.text = hackathon.status
                 tvPrize.text = "Pool: ${hackathon.prizePool}"
                 tvTeam.text = "Teams: ${hackathon.teamSize}"

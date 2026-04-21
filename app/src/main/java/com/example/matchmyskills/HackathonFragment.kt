@@ -10,6 +10,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import android.text.Editable
+import android.text.TextWatcher
+import com.google.android.material.textfield.TextInputEditText
 import com.example.matchmyskills.adapter.HackathonAdapter
 import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
 import com.example.matchmyskills.model.Hackathon
@@ -24,6 +27,7 @@ class HackathonFragment : Fragment(R.layout.fragment_hackathon) {
     private val db = FirebaseFirestore.getInstance()
     private var firebaseHackathons: List<Hackathon> = emptyList()
     private var externalHackathons: List<Hackathon> = emptyList()
+    private var allMergedHackathons: List<Hackathon> = emptyList()
     private var pendingSources: Int = 0
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -31,6 +35,7 @@ class HackathonFragment : Fragment(R.layout.fragment_hackathon) {
 
         rvHackathons = view.findViewById(R.id.rvHackathons)
         progressBar = view.findViewById(R.id.progressBar)
+        val etSearch = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSearch)
 
         rvHackathons.layoutManager = LinearLayoutManager(requireContext())
         
@@ -41,6 +46,14 @@ class HackathonFragment : Fragment(R.layout.fragment_hackathon) {
             startActivity(intent)
         }
         rvHackathons.adapter = hackathonAdapter
+
+        etSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterHackathons(s?.toString() ?: "")
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
 
         fetchHackathons()
     }
@@ -86,9 +99,24 @@ class HackathonFragment : Fragment(R.layout.fragment_hackathon) {
         if (pendingSources > 0) return
 
         progressBar.visibility = View.GONE
-        val merged = (firebaseHackathons + externalHackathons)
+        allMergedHackathons = (firebaseHackathons + externalHackathons)
             .distinctBy { it.id }
 
-        hackathonAdapter.updateData(merged)
+        hackathonAdapter.updateData(allMergedHackathons)
+    }
+
+    private fun filterHackathons(query: String) {
+        if (query.isEmpty()) {
+            hackathonAdapter.updateData(allMergedHackathons)
+            return
+        }
+
+        val filtered = allMergedHackathons.filter {
+            it.title.contains(query, ignoreCase = true) ||
+            it.organizer.contains(query, ignoreCase = true) ||
+            it.description.contains(query, ignoreCase = true) ||
+            it.themes.any { theme -> theme.contains(query, ignoreCase = true) }
+        }
+        hackathonAdapter.updateData(filtered)
     }
 }

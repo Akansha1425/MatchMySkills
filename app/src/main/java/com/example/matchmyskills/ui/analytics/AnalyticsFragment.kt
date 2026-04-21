@@ -9,6 +9,8 @@ import com.example.matchmyskills.R
 import com.example.matchmyskills.databinding.FragmentAnalyticsBinding
 import com.example.matchmyskills.util.UiState
 import com.example.matchmyskills.viewmodel.AnalyticsViewModel
+import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.model.Hackathon
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.utils.ColorTemplate
 import dagger.hilt.android.AndroidEntryPoint
@@ -43,31 +45,34 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
             when (state) {
                 is UiState.Success -> {
                     updateBarChart(state.data)
-                    updatePieChart(state.data)
+                    updatePieChart(state.data.applications)
                 }
                 else -> {}
             }
         }.launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
-    private fun updateBarChart(apps: List<com.example.matchmyskills.model.Application>) {
-        val hackathonCount = apps.count { it.opportunityType.equals("HACKATHON", ignoreCase = true) }
-        val internshipCount = apps.count { it.opportunityType.equals("INTERNSHIP", ignoreCase = true) }
+    private fun updateBarChart(data: AnalyticsViewModel.AnalyticsData) {
+        val hackathonCount = data.hackathons.size
+        val internshipCount = data.jobs.count { it.opportunityType.equals("INTERNSHIP", ignoreCase = true) }
+        val jobCount = data.jobs.count { it.opportunityType.equals("JOB", ignoreCase = true) }
 
         val entries = ArrayList<BarEntry>()
         entries.add(BarEntry(0f, hackathonCount.toFloat()))
         entries.add(BarEntry(1f, internshipCount.toFloat()))
+        entries.add(BarEntry(2f, jobCount.toFloat()))
 
-        val dataSet = BarDataSet(entries, "Hackathon vs Internship")
+        val dataSet = BarDataSet(entries, "Posted Opportunities")
         dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList()
         dataSet.valueTextSize = 12f
         
         binding.barChart.data = BarData(dataSet)
         binding.barChart.xAxis.apply {
-            valueFormatter = com.github.mikephil.charting.formatter.IndexAxisValueFormatter(listOf("Hackathons", "Internships"))
+            valueFormatter = com.github.mikephil.charting.formatter.IndexAxisValueFormatter(listOf("Hackathons", "Internships", "Jobs"))
             position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
             setDrawGridLines(false)
             granularity = 1f
+            labelCount = 3
         }
         binding.barChart.invalidate()
     }

@@ -33,7 +33,7 @@
             android:layout_marginEnd="8dp"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@+id/chip_status"
+            app:layout_constraintEnd_toStartOf="@id/chip_type"
             app:layout_constraintStart_toEndOf="@id/iv_type"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Global AI Hackathon" />
@@ -49,6 +49,16 @@
             app:layout_constraintStart_toStartOf="@id/tv_title"
             app:layout_constraintTop_toBottomOf="@id/tv_title"
             tools:text="Google Developer Student Club" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_type"
+            style="@style/Widget.Material3.Chip.Assist.Elevated"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="Hackathon"
+            app:layout_constraintEnd_toStartOf="@+id/chip_status"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_status"

@@ -17,13 +17,33 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/searchContainer"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:hint="Search internships or companies..."
+        app:startIconDrawable="@android:drawable/ic_menu_search"
+        app:layout_constraintTop_toBottomOf="@id/tvInternshipsHeader">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:inputType="text" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvInternships"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvInternshipsHeader"
+        app:layout_constraintTop_toBottomOf="@id/searchContainer"
         tools:listitem="@layout/item_job_opportunity" />
 
     <ProgressBar
