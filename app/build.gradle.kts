@@ -100,6 +100,9 @@ dependencies {
     // Cloudinary
     implementation("com.cloudinary:cloudinary-android:2.3.1")
 
+    // Zoomable ImageView
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
+
     // Testing
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

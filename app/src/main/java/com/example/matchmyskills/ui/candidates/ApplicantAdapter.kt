@@ -33,8 +33,46 @@ class ApplicantAdapter(private val onApplicantClick: (Application) -> Unit) :
                 tvMatchScore.setTextColor(Color.parseColor(MatchingEngine.getScoreColor(app.matchScore)))
                 chipStatus.text = app.status
                 
+                // Fetch and load profile image
+                loadCandidateImage(app.candidateId)
+                
                 root.setOnClickListener { onApplicantClick(app) }
             }
+        }
+
+        private fun loadCandidateImage(candidateId: String) {
+            binding.ivAvatar.setTag(com.example.matchmyskills.R.id.iv_avatar, candidateId)
+            
+            if (candidateId.isNullOrBlank()) {
+                binding.ivAvatar.setImageResource(com.example.matchmyskills.R.drawable.ic_profile)
+                return
+            }
+
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(candidateId)
+                .get()
+                .addOnSuccessListener { doc ->
+                    // Check if this view is still meant for the same candidate
+                    if (binding.ivAvatar.getTag(com.example.matchmyskills.R.id.iv_avatar) != candidateId) return@addOnSuccessListener
+
+                    val imageUrl = doc.getString("profileImage") ?: doc.getString("profileImageUrl")
+                    if (!imageUrl.isNullOrBlank()) {
+                        com.bumptech.glide.Glide.with(binding.ivAvatar.context)
+                            .load(imageUrl)
+                            .circleCrop()
+                            .placeholder(com.example.matchmyskills.R.drawable.ic_profile)
+                            .error(com.example.matchmyskills.R.drawable.ic_profile)
+                            .into(binding.ivAvatar)
+                    } else {
+                        binding.ivAvatar.setImageResource(com.example.matchmyskills.R.drawable.ic_profile)
+                    }
+                }
+                .addOnFailureListener {
+                    if (binding.ivAvatar.getTag(com.example.matchmyskills.R.id.iv_avatar) == candidateId) {
+                        binding.ivAvatar.setImageResource(com.example.matchmyskills.R.drawable.ic_profile)
+                    }
+                }
         }
     }
 

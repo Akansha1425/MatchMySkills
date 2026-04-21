@@ -39,7 +39,7 @@ class JobsFragment : Fragment(R.layout.fragment_jobs) {
         adapter = DashboardAdapter(
             onJobClick = { job ->
                 // Navigate to same applicant list as dashboard
-                val action = JobsFragmentDirections.actionJobsFragmentToApplicantListFragment(job.id)
+                val action = JobsFragmentDirections.actionJobsFragmentToCandidatesFragment(job.id)
                 findNavController().navigate(action)
             },
             onHackathonClick = { _ ->

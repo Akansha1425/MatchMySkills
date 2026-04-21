@@ -22,6 +22,7 @@ import com.google.android.material.chip.Chip
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
@@ -32,14 +33,20 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
     private var _binding: FragmentApplicantDetailBinding? = null
     private val binding get() = _binding!!
     private var application: Application? = null
+    private var currentProfileImageUrl: String? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        _binding = FragmentApplicantDetailBinding.bind(view)
+        try {
+            _binding = FragmentApplicantDetailBinding.bind(view)
 
-        loadApplicationAndBind()
-        setupListeners()
-        observeState()
+            loadApplicationAndBind()
+            setupListeners()
+            observeState()
+        } catch (e: Exception) {
+            Log.e("ApplicantDetail", "Error in onViewCreated", e)
+            Toast.makeText(context, "Error initializing detail view: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun loadApplicationAndBind() {
@@ -130,60 +137,56 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
                     Toast.makeText(context, "No resume URL provided", Toast.LENGTH_SHORT).show()
                 }
             }
+
+            ivProfile.setOnClickListener {
+                currentProfileImageUrl?.let { url ->
+                    val intent = android.content.Intent(requireContext(), com.example.matchmyskills.ImagePreviewActivity::class.java)
+                    intent.putExtra("image_url", url)
+                    startActivity(intent)
+                }
+            }
         }
     }
 
     private fun loadCandidateProfileImage(candidateId: String) {
-        Log.d("ApplicantDetail_Image", "Starting image load for candidateId: $candidateId")
-        
-        if (candidateId.isBlank()) {
-            Log.w("ApplicantDetail_Image", "Blank candidateId, setting placeholder")
+        if (candidateId.isNullOrBlank()) {
             if (isAdded && _binding != null) {
-                binding.ivProfile.setImageResource(android.R.drawable.ic_menu_myplaces)
+                binding.ivProfile.setImageResource(R.drawable.ic_profile)
             }
             return
         }
 
-        // Use lifecycleScope to ensure this only executes while fragment is alive
-        viewLifecycleOwner.lifecycleScope.launchWhenResumed {
-            firestore.collection("users").document(candidateId).get()
-                .addOnSuccessListener { doc ->
-                    // Check if fragment is still attached before accessing binding
-                    if (!isAdded || _binding == null) {
-                        Log.w("ApplicantDetail_Image", "Fragment destroyed before callback, skipping image load")
-                        return@addOnSuccessListener
-                    }
+        lifecycleScope.launch {
+            try {
+                firestore.collection("users").document(candidateId).get()
+                    .addOnSuccessListener { doc ->
+                        if (!isAdded || _binding == null) return@addOnSuccessListener
 
-                    try {
-                        val imageUrl = doc.getString("profileImage") ?: doc.getString("profileImageUrl")
-                        Log.d("ApplicantDetail_Image", "Retrieved imageUrl: $imageUrl")
+                        val profileImage = doc.getString("profileImage")
+                        val profileImageUrl = doc.getString("profileImageUrl")
+                        val actualUrl = profileImage ?: profileImageUrl
+                        currentProfileImageUrl = actualUrl
                         
-                        if (imageUrl.isNullOrBlank()) {
-                            Log.d("ApplicantDetail_Image", "Image URL is null/blank, using placeholder")
-                            binding.ivProfile.setImageResource(R.drawable.ic_profile)
-                        } else {
-                            Log.d("ApplicantDetail_Image", "Loading image from URL: $imageUrl")
+                        if (!actualUrl.isNullOrBlank()) {
                             Glide.with(this@ApplicantDetailFragment)
-                                .load(imageUrl)
+                                .load(actualUrl)
+                                .circleCrop()
                                 .placeholder(R.drawable.ic_profile)
                                 .error(R.drawable.ic_profile)
-                                .circleCrop()
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
                                 .into(binding.ivProfile)
+                        } else {
+                            binding.ivProfile.setImageResource(R.drawable.ic_profile)
                         }
-                    } catch (e: Exception) {
-                        Log.e("ApplicantDetail_Image", "Error loading candidate image", e)
+                    }
+                    .addOnFailureListener {
                         if (isAdded && _binding != null) {
                             binding.ivProfile.setImageResource(R.drawable.ic_profile)
                         }
                     }
-                }
-                .addOnFailureListener { e ->
-                    Log.e("ApplicantDetail_Image", "Firestore query failed: ${e.message}", e)
-                    // Check if fragment is still attached
-                    if (isAdded && _binding != null) {
-                        binding.ivProfile.setImageResource(android.R.drawable.ic_menu_myplaces)
-                    }
-                }
+            } catch (e: Exception) {
+                Log.e("ApplicantDetail", "Error loading profile image", e)
+            }
         }
     }
 

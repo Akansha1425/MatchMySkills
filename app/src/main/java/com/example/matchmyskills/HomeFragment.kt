@@ -46,6 +46,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var btnLogout: MaterialButton
     private lateinit var locationText: TextView
     private lateinit var ivProfileDashboard: android.widget.ImageView
+    private var currentProfileImageUrl: String? = null
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
@@ -77,6 +78,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         btnLogout = view.findViewById(R.id.btn_logout)
         locationText = view.findViewById(R.id.location_text)
         ivProfileDashboard = view.findViewById(R.id.iv_profile_dashboard)
+        
+        ivProfileDashboard.setOnClickListener {
+            currentProfileImageUrl?.let { url ->
+                val intent = Intent(requireContext(), ImagePreviewActivity::class.java)
+                intent.putExtra("image_url", url)
+                startActivity(intent)
+            }
+        }
         
         setupPieCharts()
         loadUserDetails()
@@ -141,25 +150,30 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private fun loadUserDetails() {
         val userId = auth.currentUser?.uid ?: return
-        db.collection("users").document(userId).get()
-            .addOnSuccessListener { doc ->
-                if (doc.exists() && isAdded) {
-                    val userName = doc.getString("name") ?: "Student"
-                    tvGreeting.text = "Welcome back, $userName 👋"
+        
+        db.collection("users").document(userId)
+            .addSnapshotListener { doc, error ->
+                if (error != null) {
+                    Log.e("HomeFragment", "Listen failed.", error)
+                    return@addSnapshotListener
+                }
+
+                if (doc != null && doc.exists() && isAdded) {
+                    val name = doc.getString("name") ?: "Student"
+                    val profileImageUrl = doc.getString("profileImage") ?: doc.getString("profileImageUrl")
+                    currentProfileImageUrl = profileImageUrl
                     
-                    val profileImageUrl = doc.getString("profileImage")
+                    tvGreeting.text = "Welcome back, $name 👋"
+
                     if (!profileImageUrl.isNullOrBlank()) {
                         Glide.with(this)
                             .load(profileImageUrl)
+                            .circleCrop()
                             .placeholder(R.drawable.ic_profile)
                             .error(R.drawable.ic_profile)
-                            .circleCrop()
                             .into(ivProfileDashboard)
                     }
                 }
-            }
-            .addOnFailureListener { e ->
-                Log.e("HomeFragment", "Error fetching user details", e)
             }
     }
 

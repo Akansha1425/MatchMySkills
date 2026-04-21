@@ -11,8 +11,8 @@
         android:label="Dashboard"
         tools:layout="@layout/fragment_dashboard">
         <action
-            android:id="@+id/action_dashboardFragment_to_applicantListFragment"
-            app:destination="@id/applicantListFragment" />
+            android:id="@+id/action_dashboardFragment_to_candidatesFragment"
+            app:destination="@id/candidatesFragment" />
         <action
             android:id="@+id/action_dashboardFragment_to_createInternshipFragment"
             app:destination="@id/createInternshipFragment" />
@@ -33,8 +33,8 @@
         android:label="Jobs"
         tools:layout="@layout/fragment_jobs">
         <action
-            android:id="@+id/action_jobsFragment_to_applicantListFragment"
-            app:destination="@id/applicantListFragment" />
+            android:id="@+id/action_jobsFragment_to_candidatesFragment"
+            app:destination="@id/candidatesFragment" />
     </fragment>
 
     <fragment
@@ -42,21 +42,7 @@
         android:name="com.example.matchmyskills.ui.candidates.ApplicantListFragment"
         android:label="Candidates">
         <action
-            android:id="@+id/action_applicantListFragment_to_applicantDetailFragment"
-            app:destination="@id/applicantDetailFragment" />
-        <argument
-            android:name="jobId"
-            android:defaultValue="@null"
-            app:argType="string"
-            app:nullable="true" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/applicantListFragment"
-        android:name="com.example.matchmyskills.ui.candidates.ApplicantListFragment"
-        android:label="Applicants">
-        <action
-            android:id="@+id/action_applicantListFragment_to_applicantDetailFragment"
+            android:id="@+id/action_candidatesFragment_to_applicantDetailFragment"
             app:destination="@id/applicantDetailFragment" />
         <argument
             android:name="jobId"

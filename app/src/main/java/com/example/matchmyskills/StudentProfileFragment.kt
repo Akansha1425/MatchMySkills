@@ -65,9 +65,11 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
     private lateinit var etProjects: TextInputEditText
     private lateinit var btnSave: MaterialButton
     private lateinit var btnCancel: MaterialButton
-    private lateinit var etGithub: TextInputEditText
-    private lateinit var etResume: TextInputEditText
+    private lateinit var etGithub: android.widget.EditText
+    private lateinit var etResume: android.widget.EditText
     private lateinit var btnViewResume: MaterialButton
+
+    private var currentProfileImageUrl: String? = null
     
     private var resumeUrl: String? = null
 
@@ -194,6 +196,14 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
         
         tvLinkedin.setOnClickListener { openUrl(tvLinkedin.text.toString()) }
         tvGithub.setOnClickListener { openUrl(tvGithub.text.toString()) }
+
+        ivProfile.setOnClickListener {
+            currentProfileImageUrl?.let { url ->
+                val intent = android.content.Intent(requireContext(), ImagePreviewActivity::class.java)
+                intent.putExtra("image_url", url)
+                startActivity(intent)
+            }
+        }
     }
 
     private fun showImageSourceDialog() {
@@ -219,13 +229,21 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
     }
 
     private fun openCamera() {
-        val file = java.io.File(requireContext().cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
-        tempImageUri = androidx.core.content.FileProvider.getUriForFile(
-            requireContext(),
-            "com.example.matchmyskills.fileprovider",
-            file
-        )
-        cameraLauncher.launch(tempImageUri!!)
+        try {
+            val photoFile = java.io.File(requireContext().getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES), "profile_temp_${System.currentTimeMillis()}.jpg")
+            if (!photoFile.parentFile.exists()) {
+                photoFile.parentFile.mkdirs()
+            }
+            tempImageUri = androidx.core.content.FileProvider.getUriForFile(
+                requireContext(),
+                "com.example.matchmyskills.fileprovider",
+                photoFile
+            )
+            cameraLauncher.launch(tempImageUri!!)
+        } catch (e: Exception) {
+            Log.e("StudentProfile", "Failed to create photo file", e)
+            Toast.makeText(context, "Failed to open camera: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun openUrl(url: String) {
@@ -260,58 +278,64 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
 
         db.collection("users").document(userId).get()
             .addOnSuccessListener { doc ->
-                if (!isAdded) return@addOnSuccessListener
-
-                try {
-                    if (doc.exists()) {
-                        currentUser = doc.data
-                        val name = doc.getString("name") ?: "Student"
-                        val email = doc.getString("email") ?: ""
-                        val bio = doc.getString("bio") ?: "No bio yet"
-                        val location = doc.getString("location") ?: "Not specified"
-                        val skills = doc.get("skills") as? List<String> ?: emptyList()
-                        val projects = doc.getString("projects") ?: "No projects listed"
-                        val linkedin = doc.getString("linkedin") ?: "Not linked"
-                        val github = doc.getString("github") ?: "Not linked"
-                        resumeUrl = doc.getString("resumeUrl")
-                        val profileImageUrl = doc.getString("profileImage")
-
-                        tvStudentName.text = name
-                        tvBio.text = bio
-                        tvLocation.text = location
-                        tvEmail.text = email
-                        tvProjects.text = projects
-                        tvLinkedin.text = linkedin
-                        tvGithub.text = github
-
-                        if (!profileImageUrl.isNullOrBlank()) {
-                            Glide.with(this@StudentProfileFragment)
-                                .load(profileImageUrl)
-                                .placeholder(R.drawable.ic_profile)
-                                .error(R.drawable.ic_profile)
-                                .circleCrop()
-                                .into(ivProfile)
-                        } else {
-                            loadProfileImageFromLocal()
-                        }
-
-                        // Populate edit fields
-                        etName.setText(name)
-                        etBio.setText(bio)
-                        etLocation.setText(location)
-                        etSkills.setText(skills.joinToString(", "))
-                        etLinkedin.setText(linkedin)
-                        etGithub.setText(github)
-                        etResume.setText(resumeUrl ?: "")
-                        etProjects.setText(projects)
-
-                        displaySkills(skills)
-                        calculateProfileCompletion(doc.data ?: emptyMap())
+                if (doc != null && doc.exists()) {
+                    val profileImageUrl = doc.getString("profileImage") ?: doc.getString("profileImageUrl")
+                    currentProfileImageUrl = profileImageUrl
+                    
+                    if (isAdded) {
+                        displayProfileData(doc)
                     }
-                } catch (e: Exception) {
-                    Log.e("StudentProfile", "Error in loadUserData", e)
                 }
             }
+    }
+
+    private fun displayProfileData(doc: com.google.firebase.firestore.DocumentSnapshot) {
+        try {
+            currentUser = doc.data
+            val name = doc.getString("name") ?: "Student"
+            val email = doc.getString("email") ?: ""
+            val bio = doc.getString("bio") ?: "No bio yet"
+            val location = doc.getString("location") ?: "Not specified"
+            val skills = doc.get("skills") as? List<String> ?: emptyList()
+            val projects = doc.getString("projects") ?: "No projects listed"
+            val linkedin = doc.getString("linkedin") ?: "Not linked"
+            val github = doc.getString("github") ?: "Not linked"
+            resumeUrl = doc.getString("resumeUrl")
+
+            tvStudentName.text = name
+            tvBio.text = bio
+            tvLocation.text = location
+            tvEmail.text = email
+            tvProjects.text = projects
+            tvLinkedin.text = linkedin
+            tvGithub.text = github
+
+            if (!currentProfileImageUrl.isNullOrBlank()) {
+                Glide.with(this@StudentProfileFragment)
+                    .load(currentProfileImageUrl)
+                    .placeholder(R.drawable.ic_profile)
+                    .error(R.drawable.ic_profile)
+                    .circleCrop()
+                    .into(ivProfile)
+            } else {
+                loadProfileImageFromLocal()
+            }
+
+            // Populate edit fields
+            etName.setText(name)
+            etBio.setText(bio)
+            etLocation.setText(location)
+            etSkills.setText(skills.joinToString(", "))
+            etLinkedin.setText(linkedin)
+            etGithub.setText(github)
+            etResume.setText(resumeUrl ?: "")
+            etProjects.setText(projects)
+
+            displaySkills(skills)
+            calculateProfileCompletion(doc.data ?: emptyMap())
+        } catch (e: Exception) {
+            Log.e("StudentProfile", "Error in displayProfileData", e)
+        }
     }
 
     private fun loadApplicationStatus() {
@@ -495,8 +519,12 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
 
                 override fun onSuccess(requestId: String, resultData: Map<*, *>) {
                     val imageUrl = resultData["secure_url"] as String
+                    val updateData = mapOf(
+                        "profileImage" to imageUrl,
+                        "profileImageUrl" to imageUrl
+                    )
                     db.collection("users").document(userId)
-                        .update("profileImage", imageUrl)
+                        .update(updateData)
                         .addOnSuccessListener {
                             if (isAdded) {
                                 Toast.makeText(context, "Profile photo updated!", Toast.LENGTH_SHORT).show()

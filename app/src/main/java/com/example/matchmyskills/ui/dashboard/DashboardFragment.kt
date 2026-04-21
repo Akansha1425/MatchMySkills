@@ -86,7 +86,8 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
     private fun setupRecyclerView() {
         adapter = DashboardAdapter(
             onJobClick = { job ->
-                val action = DashboardFragmentDirections.actionDashboardFragmentToApplicantListFragment(job.id)
+                // Navigate to same applicant list as dashboard
+                val action = DashboardFragmentDirections.actionDashboardFragmentToCandidatesFragment(job.id)
                 findNavController().navigate(action)
             },
             onHackathonClick = { hackathon ->

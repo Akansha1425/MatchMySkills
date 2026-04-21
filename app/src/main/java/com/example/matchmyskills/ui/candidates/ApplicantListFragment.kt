@@ -40,7 +40,7 @@ class ApplicantListFragment : Fragment(R.layout.fragment_applicant_list) {
 
     private fun setupRecyclerView() {
         adapter = ApplicantAdapter { app ->
-            val action = ApplicantListFragmentDirections.actionApplicantListFragmentToApplicantDetailFragment(app.id)
+            val action = ApplicantListFragmentDirections.actionCandidatesFragmentToApplicantDetailFragment(app.id)
             findNavController().navigate(action)
         }
         binding.rvApplicants.layoutManager = LinearLayoutManager(context)
