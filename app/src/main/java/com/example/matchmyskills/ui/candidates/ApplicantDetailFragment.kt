@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -100,23 +101,46 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
             }
 
             cgMatchedSkills.removeAllViews()
-            app.matchedSkills.forEach { skill ->
-                val chip = com.google.android.material.chip.Chip(requireContext()).apply {
-                    text = skill
-                    setChipBackgroundColorResource(android.R.`color`.holo_green_light)
-                    alpha = 0.8f
+            if (app.matchedSkills.isEmpty()) {
+                val placeholder = TextView(requireContext()).apply {
+                    text = "No direct matches found"
+                    alpha = 0.6f
                 }
-                cgMatchedSkills.addView(chip)
+                cgMatchedSkills.addView(placeholder)
+            } else {
+                app.matchedSkills.forEach { skill ->
+                    val chip = com.google.android.material.chip.Chip(requireContext()).apply {
+                        text = skill
+                        setChipBackgroundColorResource(android.R.color.holo_green_light)
+                        setTextColor(android.graphics.Color.WHITE)
+                        chipStrokeWidth = 0f
+                        isClickable = false
+                    }
+                    cgMatchedSkills.addView(chip)
+                }
             }
 
             cgMissingSkills.removeAllViews()
-            app.missingSkills.forEach { skill ->
-                val chip = com.google.android.material.chip.Chip(requireContext()).apply {
-                    text = skill
-                    setChipBackgroundColorResource(android.R.`color`.holo_red_light)
-                    alpha = 0.8f
+            if (app.missingSkills.isEmpty()) {
+                val placeholder = TextView(requireContext()).apply {
+                    text = "No missing skills 🎉"
+                    setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setPadding(0, 8, 0, 8)
                 }
-                cgMissingSkills.addView(chip)
+                cgMissingSkills.addView(placeholder)
+            } else {
+                app.missingSkills.forEach { skill ->
+                    val chip = com.google.android.material.chip.Chip(requireContext()).apply {
+                        text = skill
+                        setChipBackgroundColorResource(android.R.color.white)
+                        setTextColor(android.graphics.Color.RED)
+                        chipStrokeWidth = 2f
+                        setChipStrokeColorResource(android.R.color.holo_red_light)
+                        isClickable = false
+                    }
+                    cgMissingSkills.addView(chip)
+                }
             }
 
             btnViewResume.setOnClickListener {
