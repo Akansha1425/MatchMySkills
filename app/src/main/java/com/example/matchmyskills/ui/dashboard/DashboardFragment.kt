@@ -17,6 +17,7 @@ import com.example.matchmyskills.ui.dashboard.BottomSheetCreateOpportunity
 import com.example.matchmyskills.util.LocationHelper
 import com.example.matchmyskills.util.UiState
 import com.example.matchmyskills.viewmodel.DashboardViewModel
+import com.example.matchmyskills.viewmodel.NotificationViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -26,6 +27,7 @@ import com.example.matchmyskills.viewmodel.AuthViewModel
 class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
 
     private val viewModel: DashboardViewModel by viewModels()
+    private val notificationViewModel: NotificationViewModel by viewModels()
     private val authViewModel: AuthViewModel by viewModels()
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
@@ -51,6 +53,7 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
         setupRecyclerView()
         setupListeners()
         observeState()
+        observeNotificationBadge()
         
         // Request and fetch location
         requestLocationPermission()
@@ -104,6 +107,10 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
             Log.d("CREATE_OPPORTUNITY", "Dashboard FAB clicked")
             BottomSheetCreateOpportunity().show(parentFragmentManager, BottomSheetCreateOpportunity.TAG)
         }
+
+        binding.notificationContainer.setOnClickListener {
+            findNavController().navigate(R.id.action_dashboardFragment_to_notificationsFragment)
+        }
     }
 
     private fun observeState() {
@@ -115,11 +122,14 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
                 is UiState.Success -> {
                     val data = state.data
                     val items = mutableListOf<DashboardItem>()
+                    val groupedCounts = data.applicationCountByOpportunityId
                     // Client-side sorting because server-side orderBy was removed to avoid index requirements
                     val sortedJobs = data.jobs.sortedByDescending { it.createdAt?.time ?: 0L }
                     val sortedHackathons = data.hackathons.sortedByDescending { it.createdAt?.time ?: 0L }
                     
-                    items.addAll(sortedJobs.map { DashboardItem.JobItem(it) })
+                    items.addAll(sortedJobs.map { job ->
+                        DashboardItem.JobItem(job, groupedCounts[job.id] ?: 0)
+                    })
                     items.addAll(sortedHackathons.map { DashboardItem.HackathonItem(it) })
                     
                     adapter.submitList(items)
@@ -130,7 +140,7 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
                 }
                 is UiState.Empty -> {
                     adapter.submitList(emptyList())
-                    updateStats(DashboardViewModel.DashboardData(emptyList(), emptyList(), 0, 0, 0, 0, 0))
+                    updateStats(DashboardViewModel.DashboardData(emptyList(), emptyList(), emptyMap(), 0, 0, 0, 0, 0))
                     binding.rvJobs.visibility = View.GONE
                     binding.layoutEmptyState.visibility = View.VISIBLE
                 }
@@ -148,6 +158,17 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
         binding.tvCountShortlisted.text = data.shortlistedCount.toString()
         binding.tvCountPending.text = data.pendingCount.toString()
         binding.tvCountRejected.text = data.rejectedCount.toString()
+    }
+
+    private fun observeNotificationBadge() {
+        notificationViewModel.unreadCount.onEach { count ->
+            if (count > 0) {
+                binding.tvNotificationBadge.visibility = View.VISIBLE
+                binding.tvNotificationBadge.text = if (count > 99) "99+" else count.toString()
+            } else {
+                binding.tvNotificationBadge.visibility = View.GONE
+            }
+        }.launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
     override fun onDestroyView() {

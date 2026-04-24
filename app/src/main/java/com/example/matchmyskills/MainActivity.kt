@@ -31,7 +31,11 @@ class MainActivity : AppCompatActivity() {
         // Show/Hide bottom nav based on destination
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.createInternshipFragment, R.id.createHackathonFragment, R.id.createJobFragment, R.id.applicantDetailFragment -> {
+                R.id.createInternshipFragment,
+                R.id.createHackathonFragment,
+                R.id.createJobFragment,
+                R.id.applicantDetailFragment,
+                R.id.notificationsFragment -> {
                     binding.bottomNav.visibility = View.GONE
                 }
                 else -> {

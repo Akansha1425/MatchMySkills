@@ -5,6 +5,7 @@ import com.example.matchmyskills.model.Application
 import com.example.matchmyskills.model.Hackathon
 import com.example.matchmyskills.model.Job
 import com.example.matchmyskills.model.JobOpportunity
+import com.example.matchmyskills.model.RecruiterNotification
 import com.example.matchmyskills.model.User
 import com.google.firebase.firestore.DocumentSnapshot
 
@@ -156,6 +157,22 @@ fun DocumentSnapshot.toApplication(): Application? {
         )
     } catch (e: Exception) {
         Log.e("MAPPER_ERROR", "Error mapping Application: ${e.message}")
+        null
+    }
+}
+
+fun DocumentSnapshot.toRecruiterNotification(): RecruiterNotification? {
+    return try {
+        RecruiterNotification(
+            id = id,
+            recruiterId = getString("recruiterId") ?: "",
+            message = getString("message") ?: "",
+            jobId = getString("jobId") ?: "",
+            timestamp = getDateSafe("timestamp"),
+            isRead = getBoolean("isRead") ?: false
+        )
+    } catch (e: Exception) {
+        Log.e("MAPPER_ERROR", "Error mapping RecruiterNotification: ${e.message}")
         null
     }
 }

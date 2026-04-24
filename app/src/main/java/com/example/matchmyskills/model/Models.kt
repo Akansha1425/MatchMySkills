@@ -128,3 +128,14 @@ data class Application(
     val appliedAt: Date? = null, // Changed from Long
     @ServerTimestamp val createdAt: Date? = null
 ) : Parcelable
+
+@Parcelize
+@TypeConverters(Converters::class)
+data class RecruiterNotification(
+    val id: String = "",
+    val recruiterId: String = "",
+    val message: String = "",
+    val jobId: String = "",
+    val timestamp: Date? = null,
+    val isRead: Boolean = false
+) : Parcelable

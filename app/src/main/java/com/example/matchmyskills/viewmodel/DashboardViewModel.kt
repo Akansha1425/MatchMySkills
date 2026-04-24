@@ -30,6 +30,7 @@ class DashboardViewModel @Inject constructor(
     data class DashboardData(
         val jobs: List<Job>,
         val hackathons: List<Hackathon>,
+        val applicationCountByOpportunityId: Map<String, Int>,
         val totalApplicants: Int,
         val shortlistedCount: Int,
         val rejectedCount: Int,
@@ -69,10 +70,15 @@ class DashboardViewModel @Inject constructor(
                         if (jobs.isEmpty() && hackathons.isEmpty() && apps.isEmpty()) {
                             UiState.Empty
                         } else {
+                            val groupedCounts = apps
+                                .groupingBy { if (it.opportunityId.isNotBlank()) it.opportunityId else it.jobId }
+                                .eachCount()
+
                             UiState.Success(
                                 DashboardData(
                                     jobs = jobs,
                                     hackathons = hackathons,
+                                    applicationCountByOpportunityId = groupedCounts,
                                     totalApplicants = apps.size,
                                     shortlistedCount = apps.count { it.status == "Shortlisted" },
                                     rejectedCount = apps.count { it.status == "Rejected" },

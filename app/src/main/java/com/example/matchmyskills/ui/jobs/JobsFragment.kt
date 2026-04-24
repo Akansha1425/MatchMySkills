@@ -60,7 +60,10 @@ class JobsFragment : Fragment(R.layout.fragment_jobs) {
                     binding.progressBar.visibility = View.GONE
                     val data = state.data
                     val items = mutableListOf<DashboardItem>()
-                    items.addAll(data.jobs.map { DashboardItem.JobItem(it) })
+                    val groupedCounts = data.applicationCountByOpportunityId
+                    items.addAll(data.jobs.map { job ->
+                        DashboardItem.JobItem(job, groupedCounts[job.id] ?: 0)
+                    })
                     items.addAll(data.hackathons.map { DashboardItem.HackathonItem(it) })
                     
                     adapter.submitList(items)

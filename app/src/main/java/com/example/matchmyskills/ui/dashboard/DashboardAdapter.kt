@@ -11,7 +11,7 @@ import com.example.matchmyskills.model.Hackathon
 import com.example.matchmyskills.model.Job
 
 sealed class DashboardItem {
-    data class JobItem(val job: Job) : DashboardItem()
+    data class JobItem(val job: Job, val applicationCount: Int) : DashboardItem()
     data class HackathonItem(val hackathon: Hackathon) : DashboardItem()
 }
 
@@ -43,14 +43,14 @@ class DashboardAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = getItem(position)) {
-            is DashboardItem.JobItem -> (holder as JobViewHolder).bind(item.job)
+            is DashboardItem.JobItem -> (holder as JobViewHolder).bind(item.job, item.applicationCount)
             is DashboardItem.HackathonItem -> (holder as HackathonViewHolder).bind(item.hackathon)
         }
     }
 
     inner class JobViewHolder(private val binding: ItemJobBinding) :
         RecyclerView.ViewHolder(binding.root) {
-        fun bind(job: Job) {
+        fun bind(job: Job, applicationCount: Int) {
             binding.apply {
                 tvTitle.text = job.title
                 
@@ -63,7 +63,12 @@ class DashboardAdapter(
 
                 chipType.text = if (job.opportunityType.equals("INTERNSHIP", ignoreCase = true)) "Internship" else "Job"
                 chipStatus.text = job.status
-                tvApplicants.text = "View Applicants"
+                tvApplicants.text = when {
+                    applicationCount <= 0 -> "No applications yet"
+                    applicationCount == 1 -> "1 student applied"
+                    applicationCount >= 3 -> "3+ students applied"
+                    else -> "$applicationCount students applied"
+                }
 
                 // Fix: Dynamic Time Left
                 job.deadline?.let { deadline ->

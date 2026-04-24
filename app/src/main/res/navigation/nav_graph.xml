@@ -25,6 +25,9 @@
         <action
             android:id="@+id/action_dashboardFragment_to_hackathonDetailFragment"
             app:destination="@id/hackathonDetailFragment" />
+        <action
+            android:id="@+id/action_dashboardFragment_to_notificationsFragment"
+            app:destination="@id/notificationsFragment" />
     </fragment>
 
     <fragment
@@ -84,6 +87,10 @@
         android:id="@+id/profileFragment"
         android:name="com.example.matchmyskills.ui.profile.ProfileFragment"
         android:label="Profile" />
+    <fragment
+        android:id="@+id/notificationsFragment"
+        android:name="com.example.matchmyskills.ui.notifications.NotificationsFragment"
+        android:label="Notifications" />
     <fragment
         android:id="@+id/hackathonDetailFragment"
         android:name="com.example.matchmyskills.ui.jobs.HackathonDetailFragment"

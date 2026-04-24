@@ -10,6 +10,7 @@ import com.example.matchmyskills.model.Job
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.UUID
 
@@ -171,6 +172,12 @@ class JobDetailActivity : AppCompatActivity() {
             .document(applicationId)
             .set(applicationData)
             .addOnSuccessListener {
+                createRecruiterNotification(
+                    recruiterId = job.recruiterId,
+                    applicantName = name,
+                    opportunityTitle = job.title,
+                    jobId = job.id
+                )
                 Toast.makeText(this, "Application Submitted Successfully!", Toast.LENGTH_LONG).show()
                 dialog.dismiss()
                 setAppliedState()
@@ -182,6 +189,34 @@ class JobDetailActivity : AppCompatActivity() {
                     it.isEnabled = true
                     it.text = "Submit Application"
                 }
+            }
+    }
+
+    private fun createRecruiterNotification(
+        recruiterId: String,
+        applicantName: String,
+        opportunityTitle: String,
+        jobId: String
+    ) {
+        if (recruiterId.isBlank()) return
+
+        val notificationData = hashMapOf(
+            "recruiterId" to recruiterId,
+            "message" to "$applicantName applied to $opportunityTitle",
+            "jobId" to jobId,
+            "timestamp" to FieldValue.serverTimestamp(),
+            "isRead" to false
+        )
+
+        db.collection("notifications")
+            .add(notificationData)
+            .addOnFailureListener { error ->
+                android.util.Log.e(
+                    "NotificationWrite",
+                    "Failed to create recruiter notification for recruiterId=$recruiterId",
+                    error
+                )
+                // Keep application success unaffected if notification write fails.
             }
     }
 

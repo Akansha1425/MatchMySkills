@@ -2,24 +2,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     // USERS COLLECTION
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isSelf(userId);
     }
 
     // JOBS COLLECTION
     match /jobs/{jobId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
 
     // HACKATHONS COLLECTION
     match /hackathons/{hackathonId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
 
     // APPLICATIONS COLLECTION
     match /applications/{applicationId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
+    }
+
+    // NOTIFICATIONS COLLECTION
+    match /notifications/{notificationId} {
+      allow create: if isSignedIn()
+        && request.resource.data.recruiterId is string
+        && request.resource.data.recruiterId.size() > 0
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0;
+      allow get, list, update: if isSignedIn() && resource.data.recruiterId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.recruiterId == request.auth.uid;
     }
   }
 }
