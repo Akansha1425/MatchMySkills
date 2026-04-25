@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.cardview.widget.CardView
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +24,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.signature.ObjectKey
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -43,6 +45,7 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
     private lateinit var tvEmail: TextView
     private lateinit var cgStudentSkills: ChipGroup
     private lateinit var ivProfile: ShapeableImageView
+    private lateinit var tvProfileImageHint: TextView
     private lateinit var btnEditProfile: MaterialButton
     private lateinit var btnLogout: MaterialButton
     private lateinit var btnChangePhoto: FloatingActionButton
@@ -70,6 +73,10 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
     private lateinit var btnViewResume: MaterialButton
 
     private var currentProfileImageUrl: String? = null
+
+    private val profileUiPrefs by lazy {
+        requireContext().getSharedPreferences("student_profile_ui_prefs", android.content.Context.MODE_PRIVATE)
+    }
     
     private var resumeUrl: String? = null
 
@@ -157,6 +164,7 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
         tvEmail = view.findViewById(R.id.tv_email)
         cgStudentSkills = view.findViewById(R.id.cg_student_skills)
         ivProfile = view.findViewById(R.id.iv_profile)
+        tvProfileImageHint = view.findViewById(R.id.tv_profile_image_hint)
         btnEditProfile = view.findViewById(R.id.btn_edit_profile)
         btnLogout = view.findViewById(R.id.btn_logout)
         btnChangePhoto = view.findViewById(R.id.btn_change_photo)
@@ -198,10 +206,19 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
         tvGithub.setOnClickListener { openUrl(tvGithub.text.toString()) }
 
         ivProfile.setOnClickListener {
-            currentProfileImageUrl?.let { url ->
+            val url = currentProfileImageUrl?.trim().orEmpty()
+            if (url.startsWith("http://") || url.startsWith("https://")) {
                 val intent = android.content.Intent(requireContext(), ImagePreviewActivity::class.java)
                 intent.putExtra("image_url", url)
                 startActivity(intent)
+
+                val userId = auth.currentUser?.uid.orEmpty()
+                if (userId.isNotBlank()) {
+                    markProfileHintDismissed(userId)
+                    tvProfileImageHint.isVisible = false
+                }
+            } else {
+                Toast.makeText(context, "No profile image to preview", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -313,6 +330,9 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
             if (!currentProfileImageUrl.isNullOrBlank()) {
                 Glide.with(this@StudentProfileFragment)
                     .load(currentProfileImageUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    .skipMemoryCache(true)
+                    .signature(ObjectKey(currentProfileImageUrl ?: "profile_default"))
                     .placeholder(R.drawable.ic_profile)
                     .error(R.drawable.ic_profile)
                     .circleCrop()
@@ -320,6 +340,9 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
             } else {
                 loadProfileImageFromLocal()
             }
+
+            val userId = auth.currentUser?.uid.orEmpty()
+            tvProfileImageHint.isVisible = !currentProfileImageUrl.isNullOrBlank() && !isProfileHintDismissed(userId)
 
             // Populate edit fields
             etName.setText(name)
@@ -507,18 +530,30 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
         // Preview immediately
         Glide.with(this@StudentProfileFragment)
             .load(uri)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .skipMemoryCache(true)
             .circleCrop()
             .into(ivProfile)
 
+        val uniquePublicId = "profile_${userId}_${System.currentTimeMillis()}"
+
         com.cloudinary.android.MediaManager.get().upload(uri)
             .unsigned("matchmyskills_upload")
-            .option("public_id", "profile_$userId")
+            .option("public_id", uniquePublicId)
+            .option("folder", "matchmyskills/profiles")
             .callback(object : com.cloudinary.android.callback.UploadCallback {
                 override fun onStart(requestId: String) {}
                 override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {}
 
                 override fun onSuccess(requestId: String, resultData: Map<*, *>) {
-                    val imageUrl = resultData["secure_url"] as String
+                    val imageUrl = resultData["secure_url"] as? String
+                    if (imageUrl.isNullOrBlank()) {
+                        if (isAdded) {
+                            Toast.makeText(context, "Upload failed: image URL missing", Toast.LENGTH_LONG).show()
+                            btnChangePhoto.isEnabled = true
+                        }
+                        return
+                    }
                     val updateData = mapOf(
                         "profileImage" to imageUrl,
                         "profileImageUrl" to imageUrl
@@ -527,6 +562,16 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
                         .update(updateData)
                         .addOnSuccessListener {
                             if (isAdded) {
+                                currentProfileImageUrl = imageUrl
+                                Glide.with(this@StudentProfileFragment)
+                                    .load(imageUrl)
+                                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                                    .skipMemoryCache(true)
+                                    .signature(ObjectKey(imageUrl))
+                                    .placeholder(R.drawable.ic_profile)
+                                    .error(R.drawable.ic_profile)
+                                    .circleCrop()
+                                    .into(ivProfile)
                                 Toast.makeText(context, "Profile photo updated!", Toast.LENGTH_SHORT).show()
                                 btnChangePhoto.isEnabled = true
                             }
@@ -547,6 +592,17 @@ class StudentProfileFragment : Fragment(R.layout.fragment_student_profile) {
     private fun loadProfileImageFromLocal() {
         // Fallback or placeholder handling
         ivProfile.setImageResource(R.drawable.ic_profile)
+        tvProfileImageHint.isVisible = false
+    }
+
+    private fun isProfileHintDismissed(userId: String): Boolean {
+        if (userId.isBlank()) return false
+        return profileUiPrefs.getBoolean("hint_dismissed_$userId", false)
+    }
+
+    private fun markProfileHintDismissed(userId: String) {
+        if (userId.isBlank()) return
+        profileUiPrefs.edit().putBoolean("hint_dismissed_$userId", true).apply()
     }
 
     override fun onDestroyView() {

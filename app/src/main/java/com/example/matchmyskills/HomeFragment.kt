@@ -1,64 +1,58 @@
 package com.example.matchmyskills
 
+import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.ImageView
 import com.bumptech.glide.Glide
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.appcompat.app.AlertDialog
-import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
-import com.example.matchmyskills.model.Hackathon
-import com.example.matchmyskills.model.Job
+import androidx.core.view.isVisible
 import com.example.matchmyskills.util.LocationHelper
-import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.formatter.PercentFormatter
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.android.material.button.MaterialButton
+import com.example.matchmyskills.viewmodel.StudentDashboardUiState
+import com.example.matchmyskills.viewmodel.StudentDashboardViewModel
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import android.content.Intent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
+@AndroidEntryPoint
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private lateinit var tvJobsCount: TextView
     private lateinit var tvInternshipsCount: TextView
     private lateinit var tvHackathonsCount: TextView
     private lateinit var tvAppliedCountLabel: TextView
-    private lateinit var progressApplied: ProgressBar
-    private lateinit var chartJobs: PieChart
-    private lateinit var chartInternships: PieChart
-    private lateinit var chartHackathons: PieChart
+    private lateinit var progressApplied: LinearProgressIndicator
+    private lateinit var progressJobs: LinearProgressIndicator
+    private lateinit var progressInternships: LinearProgressIndicator
+    private lateinit var progressHackathons: LinearProgressIndicator
+    private lateinit var tvJobsApplied: TextView
+    private lateinit var tvInternshipsApplied: TextView
+    private lateinit var tvHackathonsApplied: TextView
     private lateinit var tvGreeting: TextView
-    private lateinit var btnLogout: MaterialButton
     private lateinit var locationText: TextView
-    private lateinit var ivProfileDashboard: android.widget.ImageView
+    private lateinit var ivProfileDashboard: com.google.android.material.imageview.ShapeableImageView
+    private lateinit var loadingIndicator: CircularProgressIndicator
+    private lateinit var contentContainer: LinearLayout
+    private lateinit var emptyStateContainer: LinearLayout
+    private lateinit var tvErrorMessage: TextView
     private var currentProfileImageUrl: String? = null
 
-    private val db = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
+    private val viewModel: StudentDashboardViewModel by viewModels()
 
     private val requestLocationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            Log.d("LocationPermission", "Permission granted, fetching location")
             fetchLocation()
         } else {
-            Log.w("LocationPermission", "Permission denied")
             locationText.text = "Location permission denied"
         }
     }
@@ -71,49 +65,45 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         tvHackathonsCount = view.findViewById(R.id.tv_hackathons_count)
         tvAppliedCountLabel = view.findViewById(R.id.tv_applied_count_label)
         progressApplied = view.findViewById(R.id.progress_applied)
-        chartJobs = view.findViewById(R.id.chart_jobs)
-        chartInternships = view.findViewById(R.id.chart_internships)
-        chartHackathons = view.findViewById(R.id.chart_hackathons)
+        progressJobs = view.findViewById(R.id.progress_jobs)
+        progressInternships = view.findViewById(R.id.progress_internships)
+        progressHackathons = view.findViewById(R.id.progress_hackathons)
+        tvJobsApplied = view.findViewById(R.id.tv_jobs_applied_value)
+        tvInternshipsApplied = view.findViewById(R.id.tv_internships_applied_value)
+        tvHackathonsApplied = view.findViewById(R.id.tv_hackathons_applied_value)
         tvGreeting = view.findViewById(R.id.tv_greeting)
-        btnLogout = view.findViewById(R.id.btn_logout)
         locationText = view.findViewById(R.id.location_text)
         ivProfileDashboard = view.findViewById(R.id.iv_profile_dashboard)
+        loadingIndicator = view.findViewById(R.id.loading_indicator)
+        contentContainer = view.findViewById(R.id.content_container)
+        emptyStateContainer = view.findViewById(R.id.empty_state_container)
+        tvErrorMessage = view.findViewById(R.id.tv_error_message)
         
         ivProfileDashboard.setOnClickListener {
             val url = currentProfileImageUrl?.trim().orEmpty()
-            if (url.isBlank()) {
-                Log.w("HomeFragment", "Profile image clicked with no URL available")
-                return@setOnClickListener
-            }
-
             if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                Log.w("HomeFragment", "Profile image URL is invalid: $url")
                 return@setOnClickListener
             }
-
-            runCatching {
-                val intent = Intent(requireContext(), ImagePreviewActivity::class.java)
-                intent.putExtra("image_url", url)
-                startActivity(intent)
-            }.onFailure { error ->
-                Log.e("HomeFragment", "Failed to open profile preview", error)
-            }
+            val intent = Intent(requireContext(), ImagePreviewActivity::class.java)
+            intent.putExtra("image_url", url)
+            startActivity(intent)
         }
-        
-        setupPieCharts()
-        loadUserDetails()
-        loadDashboardData()
+
+        observeDashboardState()
         
         // Request and fetch location
         requestLocationPermission()
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshDashboard()
+    }
+
     private fun requestLocationPermission() {
         if (LocationHelper.isLocationPermissionGranted(requireContext())) {
-            Log.d("LocationPermission", "Permission already granted")
             fetchLocation()
         } else {
-            Log.d("LocationPermission", "Requesting permission")
             requestLocationPermission.launch(LocationHelper.getRequiredPermissions()[0])
         }
     }
@@ -121,280 +111,97 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private fun fetchLocation() {
         LocationHelper.fetchLocation(requireContext(), object : LocationHelper.LocationCallback {
             override fun onLocationFetched(city: String, state: String) {
-                val loc = "📍 $city, $state"
+                val loc = "$city, $state"
                 locationText.text = loc
-                Log.d("LocationFetched", "Location: $city, $state")
-                
-                // Save to Firestore so other pages (like Profile) can see it
-                saveLocationToFirestore("$city, $state")
+                viewModel.updateLocation(loc)
             }
 
             override fun onLocationError(message: String) {
-                locationText.text = message
-                Log.e("LocationError", message)
+                locationText.text = "Location unavailable"
             }
         })
     }
 
-    private fun saveLocationToFirestore(location: String) {
-        val userId = auth.currentUser?.uid ?: return
-        db.collection("users").document(userId).update("location", location)
-            .addOnSuccessListener {
-                Log.d("HomeFragment", "Location updated in Firestore")
-            }
-            .addOnFailureListener { e ->
-                Log.e("HomeFragment", "Failed to update location", e)
-            }
-    }
-
-    private fun setupPieCharts() {
-        chartJobs.setUsePercentValues(true)
-        chartInternships.setUsePercentValues(true)
-        chartHackathons.setUsePercentValues(true)
-
-        listOf(chartJobs, chartInternships, chartHackathons).forEach { chart ->
-            chart.description.isEnabled = false
-            chart.setTouchEnabled(false)
-            chart.isRotationEnabled = false
-            chart.animateY(1000)
-            chart.legend.isEnabled = false
-        }
-    }
-
-    private fun loadUserDetails() {
-        val userId = auth.currentUser?.uid ?: return
-        
-        db.collection("users").document(userId)
-            .addSnapshotListener { doc, error ->
-                if (error != null) {
-                    Log.e("HomeFragment", "Listen failed.", error)
-                    return@addSnapshotListener
-                }
-
-                if (doc != null && doc.exists() && isAdded) {
-                    val name = doc.getString("name") ?: "Student"
-                    val profileImageUrl = doc.getString("profileImage") ?: doc.getString("profileImageUrl")
-                    currentProfileImageUrl = profileImageUrl
-                    
-                    tvGreeting.text = "Welcome back, $name 👋"
-
-                    if (!profileImageUrl.isNullOrBlank()) {
-                        runCatching {
-                            Glide.with(this)
-                                .load(profileImageUrl)
-                                .circleCrop()
-                                .placeholder(R.drawable.ic_profile)
-                                .error(R.drawable.ic_profile)
-                                .into(ivProfileDashboard)
-                        }.onFailure { error ->
-                            Log.e("HomeFragment", "Failed to load profile image", error)
-                            ivProfileDashboard.setImageResource(R.drawable.ic_profile)
-                        }
-                    } else {
-                        ivProfileDashboard.setImageResource(R.drawable.ic_profile)
-                    }
-                }
-            }
-    }
-
-    private fun setupLogoutButton() {
-        btnLogout.setOnClickListener {
-            showLogoutConfirmation()
-        }
-    }
-
-    private fun showLogoutConfirmation() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Logout")
-            .setMessage("Are you sure you want to logout?")
-            .setPositiveButton("Yes") { _, _ ->
-                performLogout()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-
-    private fun performLogout() {
-        FirebaseAuth.getInstance().signOut()
-        val intent = Intent(requireActivity(), LoginActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        startActivity(intent)
-        requireActivity().finish()
-    }
-
-    private fun loadDashboardData() {
+    private fun observeDashboardState() {
         viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                // Fetch Firebase Jobs & Internships
-                val firebaseJobsTask = async {
-                    try {
-                        val snapshot = db.collection("jobs")
-                            .whereEqualTo("status", "Active")
-                            .get()
-                            .await()
-                        
-                        val allJobs = snapshot.documents.mapNotNull { it.toObject(Job::class.java) }
-                        val internships = allJobs.filter { isInternship(it) }
-                        val jobs = allJobs.filter { !isInternship(it) }
-                        
-                        Pair(jobs.size, internships.size)
-                    } catch (e: Exception) {
-                        Log.e("HomeFragment", "Error fetching firebase jobs", e)
-                        Pair(0, 0)
-                    }
-                }
-
-                // Fetch Firebase Hackathons
-                val firebaseHackathonsTask = async {
-                    try {
-                        val snapshot = db.collection("hackathons")
-                            .whereEqualTo("status", "Active")
-                            .get()
-                            .await()
-                        snapshot.size()
-                    } catch (e: Exception) {
-                        Log.e("HomeFragment", "Error fetching firebase hackathons", e)
-                        0
-                    }
-                }
-
-                // Fetch Applications by type
-                val jobApplicationsTask = async {
-                    try {
-                        val userId = auth.currentUser?.uid ?: return@async 0
-                        val snapshot = db.collection("applications")
-                            .whereEqualTo("candidateId", userId)
-                            .whereEqualTo("opportunityType", "JOB")
-                            .get()
-                            .await()
-                        snapshot.size()
-                    } catch (e: Exception) {
-                        Log.e("HomeFragment", "Error fetching job applications", e)
-                        0
-                    }
-                }
-
-                val internshipApplicationsTask = async {
-                    try {
-                        val userId = auth.currentUser?.uid ?: return@async 0
-                        val snapshot = db.collection("applications")
-                            .whereEqualTo("candidateId", userId)
-                            .whereEqualTo("opportunityType", "INTERNSHIP")
-                            .get()
-                            .await()
-                        snapshot.size()
-                    } catch (e: Exception) {
-                        Log.e("HomeFragment", "Error fetching internship applications", e)
-                        0
-                    }
-                }
-
-                val hackathonApplicationsTask = async {
-                    try {
-                        val userId = auth.currentUser?.uid ?: return@async 0
-                        val snapshot = db.collection("applications")
-                            .whereEqualTo("candidateId", userId)
-                            .whereEqualTo("opportunityType", "HACKATHON")
-                            .get()
-                            .await()
-                        snapshot.size()
-                    } catch (e: Exception) {
-                        Log.e("HomeFragment", "Error fetching hackathon applications", e)
-                        0
-                    }
-                }
-
-                // Fetch External Data concurrently
-                val externalJobsTask = async {
-                    try { ExternalOpportunityDataSource.fetchJobs("software", "JOB").size } catch(e: Exception) { 0 }
-                }
-                
-                val externalInternshipsTask = async {
-                    try { ExternalOpportunityDataSource.fetchJobs("internship", "INTERNSHIP").size } catch(e: Exception) { 0 }
-                }
-
-                val externalHackathonsTask = async {
-                    try { ExternalOpportunityDataSource.fetchHackathons().size } catch(e: Exception) { 0 }
-                }
-
-                // Await all results
-                val (fbJobsCount, fbInternshipsCount) = firebaseJobsTask.await()
-                val fbHackathonsCount = firebaseHackathonsTask.await()
-                val jobApplied = jobApplicationsTask.await()
-                val internshipApplied = internshipApplicationsTask.await()
-                val hackathonApplied = hackathonApplicationsTask.await()
-                
-                val extJobsCount = externalJobsTask.await()
-                val extInternshipsCount = externalInternshipsTask.await()
-                val extHackathonsCount = externalHackathonsTask.await()
-
-                val totalJobs = fbJobsCount + extJobsCount
-                val totalInternships = fbInternshipsCount + extInternshipsCount
-                val totalHackathons = fbHackathonsCount + extHackathonsCount
-                val totalApplications = jobApplied + internshipApplied + hackathonApplied
-                val totalOpportunities = totalJobs + totalInternships + totalHackathons
-
-                // Update UI on main thread
-                withContext(Dispatchers.Main) {
-                    tvJobsCount.text = totalJobs.toString()
-                    tvInternshipsCount.text = totalInternships.toString()
-                    tvHackathonsCount.text = totalHackathons.toString()
-
-                    tvAppliedCountLabel.text = "$totalApplications Applications / $totalOpportunities Total Opportunities"
-                    
-                    if (totalOpportunities > 0) {
-                        val progress = ((totalApplications.toFloat() / totalOpportunities.toFloat()) * 100).toInt()
-                        progressApplied.progress = progress.coerceAtMost(100)
-                    } else {
-                        progressApplied.progress = 0
-                    }
-
-                    // Setup pie charts
-                    setupPieChart(chartJobs, jobApplied, totalJobs, "#1565C0")
-                    setupPieChart(chartInternships, internshipApplied, totalInternships, "#2E7D32")
-                    setupPieChart(chartHackathons, hackathonApplied, totalHackathons, "#EF6C00")
-                }
-
-            } catch (e: Exception) {
-                Log.e("HomeFragment", "Error loading dashboard data", e)
+            viewModel.uiState.collectLatest { state ->
+                renderState(state)
             }
         }
     }
 
-    private fun setupPieChart(chart: PieChart, applied: Int, total: Int, color: String) {
-        val entries = mutableListOf<PieEntry>()
-        val notApplied = (total - applied).coerceAtLeast(0)
+    private fun renderState(state: StudentDashboardUiState) {
+        loadingIndicator.isVisible = state.isLoading
+        contentContainer.isVisible = !state.isLoading && !state.isEmpty
+        emptyStateContainer.isVisible = !state.isLoading && state.isEmpty
+        tvErrorMessage.isVisible = !state.errorMessage.isNullOrBlank()
+        tvErrorMessage.text = state.errorMessage.orEmpty()
 
-        entries.add(PieEntry(applied.toFloat(), "Applied"))
-        if (notApplied > 0) {
-            entries.add(PieEntry(notApplied.toFloat(), "Not Applied"))
+        locationText.text = state.location
+        tvGreeting.text = "Welcome back, ${state.userName}"
+
+        currentProfileImageUrl = state.profileImageUrl
+        if (!state.profileImageUrl.isNullOrBlank()) {
+            Glide.with(this)
+                .load(state.profileImageUrl)
+                .circleCrop()
+                .placeholder(R.drawable.ic_profile)
+                .error(R.drawable.ic_profile)
+                .into(ivProfileDashboard)
+        } else {
+            ivProfileDashboard.setImageResource(R.drawable.ic_profile)
         }
 
-        val dataSet = PieDataSet(entries, "").apply {
-            val appliedColor = android.graphics.Color.parseColor(color)
-            val notAppliedColor = android.graphics.Color.parseColor("#E0E0E0")
-            setColors(if (notApplied > 0) listOf(appliedColor, notAppliedColor) else listOf(appliedColor))
-            valueFormatter = PercentFormatter()
-            valueTextSize = 12f
-            valueTextColor = android.graphics.Color.BLACK
-        }
+        val stats = state.stats
+        tvJobsCount.text = stats.totalJobs.toString()
+        tvInternshipsCount.text = stats.totalInternships.toString()
+        tvHackathonsCount.text = stats.totalHackathons.toString()
 
-        val data = PieData(dataSet).apply {
-            setValueFormatter(PercentFormatter())
-        }
+        tvAppliedCountLabel.text = "${stats.totalApplications} Applications / ${stats.totalOpportunities} Opportunities"
+        animateProgress(progressApplied, (stats.activityProgress * 100f).toInt())
 
-        chart.data = data
-        chart.invalidate()
+        renderSection(
+            applied = stats.appliedJobs,
+            total = stats.totalJobs,
+            progressBar = progressJobs,
+            label = tvJobsApplied
+        )
+
+        renderSection(
+            applied = stats.appliedInternships,
+            total = stats.totalInternships,
+            progressBar = progressInternships,
+            label = tvInternshipsApplied
+        )
+
+        renderSection(
+            applied = stats.appliedHackathons,
+            total = stats.totalHackathons,
+            progressBar = progressHackathons,
+            label = tvHackathonsApplied
+        )
     }
 
-    private fun isInternship(job: Job): Boolean {
-        if (job.opportunityType.equals("INTERNSHIP", ignoreCase = true)) {
-            return true
+    private fun renderSection(
+        applied: Int,
+        total: Int,
+        progressBar: LinearProgressIndicator,
+        label: TextView
+    ) {
+        val appliedPercent = if (total > 0) {
+            ((applied.toFloat() / total.toFloat()) * 100f).toInt().coerceIn(0, 100)
+        } else {
+            0
         }
-        val text = "${job.title} ${job.description}".lowercase()
-        return text.contains("intern") || text.contains("internship")
+
+        label.text = "$applied / $total Applied"
+        animateProgress(progressBar, appliedPercent)
+    }
+
+    private fun animateProgress(progressBar: LinearProgressIndicator, target: Int) {
+        ObjectAnimator.ofInt(progressBar, "progress", progressBar.progress, target).apply {
+            duration = 450
+            start()
+        }
     }
 }

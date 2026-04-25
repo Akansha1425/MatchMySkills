@@ -3,7 +3,9 @@ package com.example.matchmyskills
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.example.matchmyskills.notifications.NotificationPermissionHelper
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class StudentDashboard : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -17,6 +19,7 @@ class StudentDashboard : AppCompatActivity() {
         }
 
         val bottomNav = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        bottomNav.selectedItemId = R.id.nav_home
         bottomNav.setOnItemSelectedListener { item ->
             val fragment = when (item.itemId) {
                 R.id.nav_home -> HomeFragment()

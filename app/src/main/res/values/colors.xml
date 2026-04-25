@@ -13,4 +13,12 @@
     <color name="matchmyskills_success">#4CAF50</color>
     <color name="matchmyskills_divider">#EEEEEE</color>
     <color name="matchmyskills_primary_container">#E8EAF6</color>
+
+    <!-- Student dashboard palette -->
+    <color name="dashboard_primary">#4F46E5</color>
+    <color name="dashboard_success">#22C55E</color>
+    <color name="dashboard_warning">#F59E0B</color>
+    <color name="dashboard_background">#F8FAFC</color>
+    <color name="dashboard_surface">#FFFFFFFF</color>
+    <color name="dashboard_nav_inactive">#64748B</color>
 </resources>

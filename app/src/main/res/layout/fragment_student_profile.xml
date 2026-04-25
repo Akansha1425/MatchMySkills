@@ -34,16 +34,32 @@
                 android:id="@+id/iv_profile"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:contentDescription="Student profile photo"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_profile"
                 android:background="@drawable/circle_bg"
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+
+            <TextView
+                android:id="@+id/tv_profile_image_hint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_social_button"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:text="Tap to view"
+                android:textColor="@color/matchmyskills_primary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/btn_change_photo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
+                android:contentDescription="Change profile photo"
                 android:visibility="gone"
                 app:fabCustomSize="36dp"
                 app:srcCompat="@drawable/ic_camera"
