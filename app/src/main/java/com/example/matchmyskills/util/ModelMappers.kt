@@ -145,6 +145,7 @@ fun DocumentSnapshot.toApplication(): Application? {
             type = normalizedType,
             jobId = getString("jobId") ?: "",
             opportunityId = getString("opportunityId") ?: getString("jobId") ?: "",
+            opportunityTitle = getString("opportunityTitle") ?: "",
             opportunityType = legacyOpportunityType,
             source = getString("source") ?: "FIREBASE",
             recruiterId = getString("recruiterId") ?: "",
@@ -189,6 +190,29 @@ fun DocumentSnapshot.toRecruiterNotification(): RecruiterNotification? {
         )
     } catch (e: Exception) {
         Log.e("MAPPER_ERROR", "Error mapping RecruiterNotification: ${e.message}")
+        null
+    }
+}
+fun DocumentSnapshot.toUserNotification(): com.example.matchmyskills.model.UserNotification? {
+    return try {
+        // Handle variations in field names for userId
+        val userId = getString("userId") 
+            ?: getString("uid") 
+            ?: getString("candidateId") 
+            ?: ""
+            
+        com.example.matchmyskills.model.UserNotification(
+            id = id,
+            userId = userId,
+            message = getString("message") ?: "",
+            type = getString("type") ?: "info",
+            opportunityId = getString("opportunityId") ?: getString("jobId") ?: "",
+            opportunityType = getString("opportunityType") ?: "JOB",
+            timestamp = getDateSafe("timestamp"),
+            isRead = getBoolean("isRead") ?: false
+        )
+    } catch (e: Exception) {
+        Log.e("MAPPER_ERROR", "Error mapping UserNotification: ${e.message}")
         null
     }
 }

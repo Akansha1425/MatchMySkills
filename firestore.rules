@@ -32,13 +32,13 @@ service cloud.firestore {
 
     // NOTIFICATIONS COLLECTION
     match /notifications/{notificationId} {
-      allow create: if isSignedIn()
-        && request.resource.data.recruiterId is string
-        && request.resource.data.recruiterId.size() > 0
-        && request.resource.data.message is string
-        && request.resource.data.message.size() > 0;
-      allow get, list, update: if isSignedIn() && resource.data.recruiterId == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.recruiterId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.recruiterId == request.auth.uid ||
+        resource.data.candidateId == request.auth.uid
+      );
     }
   }
 }

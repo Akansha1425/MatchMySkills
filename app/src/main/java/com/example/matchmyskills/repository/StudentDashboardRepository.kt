@@ -55,11 +55,21 @@ class StudentDashboardRepository @Inject constructor(
         }
 
         val applicationsDeferred = async {
-            firestore.collection("applications")
+            val byCandidate = firestore.collection("applications")
                 .whereEqualTo("candidateId", userId)
                 .get()
                 .await()
                 .documents
+            
+            if (byCandidate.isEmpty()) {
+                firestore.collection("applications")
+                    .whereEqualTo("userId", userId)
+                    .get()
+                    .await()
+                    .documents
+            } else {
+                byCandidate
+            }
         }
 
         val externalJobsDeferred = async {

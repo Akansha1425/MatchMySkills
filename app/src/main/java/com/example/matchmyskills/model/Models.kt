@@ -110,6 +110,7 @@ data class Application(
     val type: String = "",
     val jobId: String = "",
     val opportunityId: String = "",
+    val opportunityTitle: String = "",
     val opportunityType: String = "JOB",
     val source: String = "FIREBASE",
     val recruiterId: String = "",
@@ -144,6 +145,19 @@ data class RecruiterNotification(
     val recruiterId: String = "",
     val message: String = "",
     val jobId: String = "",
+    val timestamp: Date? = null,
+    val isRead: Boolean = false
+) : Parcelable
+
+@Parcelize
+@TypeConverters(Converters::class)
+data class UserNotification(
+    val id: String = "",
+    val userId: String = "",
+    val message: String = "",
+    val type: String = "info", // shortlisted, rejected, info
+    val opportunityId: String = "",
+    val opportunityType: String = "JOB",
     val timestamp: Date? = null,
     val isRead: Boolean = false
 ) : Parcelable

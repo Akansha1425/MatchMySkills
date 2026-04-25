@@ -18,6 +18,7 @@ import com.example.matchmyskills.viewmodel.StudentDashboardViewModel
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import android.content.Intent
+import com.example.matchmyskills.viewmodel.UserNotificationViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -43,9 +44,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var contentContainer: LinearLayout
     private lateinit var emptyStateContainer: LinearLayout
     private lateinit var tvErrorMessage: TextView
+    private lateinit var notificationButton: View
+    private lateinit var notificationBadge: TextView
     private var currentProfileImageUrl: String? = null
 
     private val viewModel: StudentDashboardViewModel by viewModels()
+    private val notificationViewModel: UserNotificationViewModel by viewModels()
 
     private val requestLocationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -78,6 +82,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         contentContainer = view.findViewById(R.id.content_container)
         emptyStateContainer = view.findViewById(R.id.empty_state_container)
         tvErrorMessage = view.findViewById(R.id.tv_error_message)
+        notificationButton = view.findViewById(R.id.btn_notifications)
+        notificationBadge = view.findViewById(R.id.tv_notification_badge)
         
         ivProfileDashboard.setOnClickListener {
             val url = currentProfileImageUrl?.trim().orEmpty()
@@ -89,10 +95,22 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             startActivity(intent)
         }
 
+        notificationButton.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, com.example.matchmyskills.ui.notifications.UserNotificationsFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+
         observeDashboardState()
+        observeNotifications()
         
         // Request and fetch location
         requestLocationPermission()
+
+        // DIAGNOSTIC: Show current user ID to verify mismatch
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        android.widget.Toast.makeText(context, "Logged in as: $currentUid", android.widget.Toast.LENGTH_LONG).show()
     }
 
     override fun onResume() {
@@ -120,6 +138,19 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 locationText.text = "Location unavailable"
             }
         })
+    }
+
+    private fun observeNotifications() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            notificationViewModel.unreadCount.collectLatest { count ->
+                if (count > 0) {
+                    notificationBadge.isVisible = true
+                    notificationBadge.text = if (count > 9) "9+" else count.toString()
+                } else {
+                    notificationBadge.isVisible = false
+                }
+            }
+        }
     }
 
     private fun observeDashboardState() {

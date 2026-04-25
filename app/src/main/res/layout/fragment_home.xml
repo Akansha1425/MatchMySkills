@@ -80,6 +80,40 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
+            <FrameLayout
+                android:id="@+id/btn_notifications"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:layout_constraintBottom_toBottomOf="@id/iv_profile_dashboard"
+                app:layout_constraintEnd_toStartOf="@id/iv_profile_dashboard"
+                app:layout_constraintTop_toTopOf="@id/iv_profile_dashboard">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_notifications"
+                    app:tint="@color/dashboard_primary" />
+
+                <TextView
+                    android:id="@+id/tv_notification_badge"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_tag"
+                    android:backgroundTint="@color/dashboard_danger"
+                    android:fontFamily="sans-serif-bold"
+                    android:gravity="center"
+                    android:text="0"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"
+                    android:visibility="gone" />
+            </FrameLayout>
+
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/iv_profile_dashboard"
                 android:layout_width="56dp"

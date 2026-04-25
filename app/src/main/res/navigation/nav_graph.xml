@@ -99,4 +99,8 @@
             android:name="hackathonId"
             app:argType="string" />
     </fragment>
+    <fragment
+        android:id="@+id/userNotificationsFragment"
+        android:name="com.example.matchmyskills.ui.notifications.UserNotificationsFragment"
+        android:label="Notifications" />
 </navigation>

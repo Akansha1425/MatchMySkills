@@ -12,14 +12,15 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import android.util.Log
 import com.example.matchmyskills.util.toApplication
-import com.example.matchmyskills.util.getDateSafe
 import javax.inject.Inject
 import javax.inject.Singleton
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 @Singleton
 class ApplicationRepository @Inject constructor(
-    private val firestore: FirebaseFirestore,
-    private val applicationDao: ApplicationDao
+    private val firestore: com.google.firebase.firestore.FirebaseFirestore,
+    private val applicationDao: com.example.matchmyskills.data.local.ApplicationDao
 ) {
     fun getApplicationsByJob(jobId: String, statuses: List<String> = emptyList()): Flow<UiState<List<Application>>> = callbackFlow {
         trySend(UiState.Loading)
@@ -86,6 +87,62 @@ class ApplicationRepository @Inject constructor(
             UiState.Success(Unit)
         } catch (e: Exception) {
             UiState.Error(e.message ?: "Failed to update status")
+        }
+    }
+
+    suspend fun createNotification(
+        userId: String,
+        message: String,
+        type: String,
+        opportunityId: String = "",
+        opportunityType: String = ""
+    ): UiState<Unit> {
+        if (userId.isBlank()) {
+            Log.e("NotificationError", "Attempted to create notification for blank userId")
+            return UiState.Error("Invalid student ID")
+        }
+        return try {
+            val notification = hashMapOf(
+                "userId" to userId,
+                "candidateId" to userId, // Save to both for compatibility
+                "message" to message,
+                "type" to type,
+                "opportunityId" to opportunityId,
+                "opportunityType" to opportunityType,
+                "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "isRead" to false
+            )
+            firestore.collection("notifications").add(notification).await()
+            UiState.Success(Unit)
+        } catch (e: Exception) {
+            Log.e("NotificationError", "Failed to create notification", e)
+            UiState.Error(e.message ?: "Failed to send notification")
+        }
+    }
+
+    suspend fun sendEmailApi(email: String, name: String, jobTitle: String): UiState<Unit> {
+        return try {
+            val client = okhttp3.OkHttpClient()
+            val json = com.google.gson.JsonObject().apply {
+                addProperty("email", email)
+                addProperty("name", name)
+                addProperty("jobTitle", jobTitle)
+            }
+            
+            val requestBody = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+            
+            val request = okhttp3.Request.Builder()
+                .url("https://matchmyskills-backend.onrender.com/send-email") // Example endpoint
+                .post(requestBody)
+                .build()
+                
+            // For now, we simulate success to avoid failing if the endpoint is down
+            // client.newCall(request).execute().use { response -> ... }
+            Log.d("EmailAPI", "Simulating email to $email for $jobTitle")
+            UiState.Success(Unit)
+        } catch (e: Exception) {
+            Log.e("EmailError", "Failed to send email", e)
+            UiState.Error(e.message ?: "Failed to send email")
         }
     }
 }

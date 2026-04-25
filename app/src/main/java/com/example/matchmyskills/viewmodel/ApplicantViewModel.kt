@@ -1,5 +1,6 @@
 package com.example.matchmyskills.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.matchmyskills.model.Application
@@ -78,6 +79,64 @@ class ApplicantViewModel @Inject constructor(
         viewModelScope.launch {
             _updateState.value = UiState.Loading
             val result = repository.updateApplicationStatus(applicationId, status)
+            _updateState.value = result
+        }
+    }
+
+    fun shortlistCandidate(
+        applicationId: String,
+        candidateId: String,
+        jobTitle: String,
+        candidateEmail: String,
+        candidateName: String,
+        opportunityId: String = "",
+        opportunityType: String = ""
+    ) {
+        viewModelScope.launch {
+            _updateState.value = UiState.Loading
+            
+            // 1. Update Application Status
+            val statusResult = repository.updateApplicationStatus(applicationId, "Shortlisted")
+            if (statusResult is UiState.Error) {
+                _updateState.value = statusResult
+                return@launch
+            }
+
+            // 2. Create In-App Notification
+            val notificationMsg = "You have been shortlisted for $jobTitle"
+            val notifyResult = repository.createNotification(
+                userId = candidateId,
+                message = notificationMsg,
+                type = "shortlisted",
+                opportunityId = opportunityId,
+                opportunityType = opportunityType
+            )
+            
+            if (notifyResult is UiState.Error) {
+                Log.w("RecruiterAction", "Notification failed but status updated: ${notifyResult.message}")
+            }
+
+            // 3. Send Email Notification
+            repository.sendEmailApi(candidateEmail, candidateName, jobTitle)
+
+            _updateState.value = UiState.Success(Unit)
+        }
+    }
+
+    fun rejectCandidate(applicationId: String, candidateId: String, jobTitle: String, opportunityId: String = "", opportunityType: String = "") {
+        viewModelScope.launch {
+            _updateState.value = UiState.Loading
+            val result = repository.updateApplicationStatus(applicationId, "Rejected")
+            if (result is UiState.Success) {
+                val msg = "Application status update for $jobTitle: Rejected"
+                repository.createNotification(
+                    userId = candidateId, 
+                    message = msg, 
+                    type = "rejected",
+                    opportunityId = opportunityId,
+                    opportunityType = opportunityType
+                )
+            }
             _updateState.value = result
         }
     }

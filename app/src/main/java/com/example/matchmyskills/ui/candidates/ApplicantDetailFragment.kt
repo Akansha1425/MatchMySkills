@@ -38,6 +38,7 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
     private val binding get() = _binding!!
     private var application: Application? = null
     private var currentProfileImageUrl: String? = null
+    private var currentJobTitle: String = "the opportunity"
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -95,6 +96,9 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
             // Show a simple unified summary of matched skills
             tvCoreMatch.text = "${app.coreMatchCount} / ${app.optionalMatchCount} skills matched"
             tvOptionalMatch.visibility = android.view.View.GONE
+
+            // Handle status-based UI
+            updateActionButtonsState(app.status)
 
             cgSkills.removeAllViews()
             app.candidateSkills.forEach { skill ->
@@ -177,6 +181,31 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
         }
     }
 
+    private fun updateActionButtonsState(status: String) {
+        binding.apply {
+            when (status.lowercase()) {
+                "shortlisted" -> {
+                    btnShortlist.text = "Shortlisted"
+                    btnShortlist.isEnabled = false
+                    btnShortlist.alpha = 0.6f
+                    btnReject.visibility = View.GONE
+                }
+                "rejected" -> {
+                    btnReject.text = "Rejected"
+                    btnReject.isEnabled = false
+                    btnShortlist.visibility = View.GONE
+                }
+                else -> {
+                    btnShortlist.text = "Shortlist Candidate"
+                    btnShortlist.isEnabled = true
+                    btnShortlist.alpha = 1.0f
+                    btnReject.visibility = View.VISIBLE
+                    btnReject.isEnabled = true
+                }
+            }
+        }
+    }
+
     private fun loadCandidateProfileImage(candidateId: String) {
         if (candidateId.isNullOrBlank()) {
             if (isAdded && _binding != null) {
@@ -220,13 +249,38 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
 
     private fun setupListeners() {
         binding.btnShortlist.setOnClickListener {
-            application?.id?.let { viewModel.updateStatus(it, "Shortlisted") }
+            application?.let { app ->
+                if (app.candidateId.isBlank()) {
+                    Toast.makeText(context, "Cannot shortlist: Candidate ID missing", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                val displayTitle = app.opportunityTitle.ifBlank { currentJobTitle }
+                viewModel.shortlistCandidate(
+                    applicationId = app.id,
+                    candidateId = app.candidateId,
+                    jobTitle = displayTitle,
+                    candidateEmail = app.candidateEmail,
+                    candidateName = app.candidateName,
+                    opportunityId = app.opportunityId,
+                    opportunityType = app.opportunityType
+                )
+            }
         }
         binding.btnReject.setOnClickListener {
-            application?.id?.let { viewModel.updateStatus(it, "Rejected") }
-        }
-        binding.btnHire.setOnClickListener {
-            application?.id?.let { viewModel.updateStatus(it, "Hired") }
+            application?.let { app ->
+                if (app.candidateId.isBlank()) {
+                    Toast.makeText(context, "Cannot reject: Candidate ID missing", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                val displayTitle = app.opportunityTitle.ifBlank { currentJobTitle }
+                viewModel.rejectCandidate(
+                    applicationId = app.id, 
+                    candidateId = app.candidateId, 
+                    jobTitle = displayTitle,
+                    opportunityId = app.opportunityId,
+                    opportunityType = app.opportunityType
+                )
+            }
         }
     }
 
@@ -244,7 +298,8 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
                 return@launch
             }
 
-            val (jobDescription, requiredSkills) = opportunityContext
+            val (jobTitle, jobDescription, requiredSkills) = opportunityContext
+            currentJobTitle = jobTitle
             val result = CandidateAiAnalyzer.analyze(
                 CandidateAnalysisInput(
                     jobDescription = jobDescription,
@@ -272,26 +327,28 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
         }
     }
 
-    private suspend fun fetchOpportunityContext(app: Application): Pair<String, List<String>>? {
+    private suspend fun fetchOpportunityContext(app: Application): Triple<String, String, List<String>>? {
         return try {
             if (app.opportunityType.equals("HACKATHON", ignoreCase = true)) {
                 val doc = firestore.collection("hackathons")
                     .document(app.opportunityId.ifBlank { app.jobId })
                     .get()
                     .await()
+                val title = doc.getString("title").orEmpty()
                 val description = doc.getString("description").orEmpty()
                 val skills = doc.get("themes") as? List<String> ?: emptyList()
-                Pair(description, skills)
+                Triple(title, description, skills)
             } else {
                 val doc = firestore.collection("jobs")
                     .document(app.opportunityId.ifBlank { app.jobId })
                     .get()
                     .await()
+                val title = doc.getString("title").orEmpty()
                 val description = doc.getString("description").orEmpty()
                 val skills = (doc.get("coreSkills") as? List<String>)
                     ?: (doc.get("skills") as? List<String>)
                     ?: emptyList()
-                Pair(description, skills)
+                Triple(title, description, skills)
             }
         } catch (e: Exception) {
             Log.e("ApplicantDetail", "Failed to load opportunity context", e)
