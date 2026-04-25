@@ -13,11 +13,13 @@ class MatchMySkillsApp : Application() {
 		super.onCreate()
 		OpportunityNotificationHelper.createChannel(this)
 		OpportunitySyncScheduler.schedulePeriodicSync(this)
-		
-		val config = mapOf(
-			"cloud_name" to "dw5mkf4og",
-			"secure" to true
-		)
-		MediaManager.init(this, config)
+
+		if (BuildConfig.CLOUDINARY_CLOUD_NAME.isNotBlank()) {
+			val config = mapOf(
+				"cloud_name" to BuildConfig.CLOUDINARY_CLOUD_NAME,
+				"secure" to true
+			)
+			MediaManager.init(this, config)
+		}
 	}
 }

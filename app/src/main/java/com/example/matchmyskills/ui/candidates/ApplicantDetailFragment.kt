@@ -13,6 +13,8 @@ import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.matchmyskills.R
+import com.example.matchmyskills.ai.CandidateAiAnalyzer
+import com.example.matchmyskills.ai.CandidateAnalysisInput
 import com.example.matchmyskills.databinding.FragmentApplicantDetailBinding
 import com.example.matchmyskills.model.Application
 import com.example.matchmyskills.util.toApplication
@@ -24,6 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @AndroidEntryPoint
 class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
@@ -68,6 +71,7 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
                 }
                 application = app
                 setupUI(app)
+                runAiAnalysis(app)
             }
             .addOnFailureListener {
                 Toast.makeText(context, "Failed to load applicant details", Toast.LENGTH_SHORT).show()
@@ -224,6 +228,80 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
         binding.btnHire.setOnClickListener {
             application?.id?.let { viewModel.updateStatus(it, "Hired") }
         }
+    }
+
+    private fun runAiAnalysis(app: Application) {
+        binding.progressAiAnalysis.visibility = View.VISIBLE
+        binding.tvAiMatchScore.text = "Match Score: --"
+        binding.tvAiFitLabel.text = "Analyzing..."
+
+        lifecycleScope.launch {
+            val opportunityContext = fetchOpportunityContext(app)
+            if (opportunityContext == null) {
+                binding.progressAiAnalysis.visibility = View.GONE
+                binding.tvAiFitLabel.text = "Needs Improvement"
+                binding.tvAiRecommendation.text = "Recommendation: Could not load job details for AI insights."
+                return@launch
+            }
+
+            val (jobDescription, requiredSkills) = opportunityContext
+            val result = CandidateAiAnalyzer.analyze(
+                CandidateAnalysisInput(
+                    jobDescription = jobDescription,
+                    requiredSkills = requiredSkills,
+                    candidateSkills = app.candidateSkills.ifEmpty { app.skills },
+                    resumeText = app.resumeText
+                )
+            )
+
+            binding.progressAiAnalysis.visibility = View.GONE
+
+            result.onSuccess { analysis ->
+                binding.tvAiMatchScore.text = "Match Score: ${analysis.matchPercentage}%"
+                binding.tvAiFitLabel.text = analysis.fitLabel
+                binding.tvAiStrengths.text = "Strengths:\n${formatList(analysis.strengths)}"
+                binding.tvAiMissing.text = "Missing Skills:\n${formatList(analysis.missingSkills)}"
+                binding.tvAiRecommendation.text = "Recommendation: ${analysis.recommendation}"
+            }.onFailure { error ->
+                binding.tvAiMatchScore.text = "Match Score: --"
+                binding.tvAiFitLabel.text = "Needs Improvement"
+                binding.tvAiStrengths.text = "Strengths:\n- AI analysis unavailable"
+                binding.tvAiMissing.text = "Missing Skills:\n- Not enough data"
+                binding.tvAiRecommendation.text = "Recommendation: ${error.message ?: "AI service unavailable"}"
+            }
+        }
+    }
+
+    private suspend fun fetchOpportunityContext(app: Application): Pair<String, List<String>>? {
+        return try {
+            if (app.opportunityType.equals("HACKATHON", ignoreCase = true)) {
+                val doc = firestore.collection("hackathons")
+                    .document(app.opportunityId.ifBlank { app.jobId })
+                    .get()
+                    .await()
+                val description = doc.getString("description").orEmpty()
+                val skills = doc.get("themes") as? List<String> ?: emptyList()
+                Pair(description, skills)
+            } else {
+                val doc = firestore.collection("jobs")
+                    .document(app.opportunityId.ifBlank { app.jobId })
+                    .get()
+                    .await()
+                val description = doc.getString("description").orEmpty()
+                val skills = (doc.get("coreSkills") as? List<String>)
+                    ?: (doc.get("skills") as? List<String>)
+                    ?: emptyList()
+                Pair(description, skills)
+            }
+        } catch (e: Exception) {
+            Log.e("ApplicantDetail", "Failed to load opportunity context", e)
+            null
+        }
+    }
+
+    private fun formatList(items: List<String>): String {
+        if (items.isEmpty()) return "- None"
+        return items.joinToString("\n") { "- $it" }
     }
 
     private fun observeState() {

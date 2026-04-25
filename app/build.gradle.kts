@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.services)
@@ -6,6 +8,13 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.navigation.safeargs)
     alias(libs.plugins.kotlin.parcelize)
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -18,6 +27,14 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        val cloudinaryCloudName = localProperties.getProperty("CLOUDINARY_CLOUD_NAME", "dw5mkf4og")
+        val cloudinaryUnsignedPreset = localProperties.getProperty("CLOUDINARY_UNSIGNED_PRESET", "")
+        val aiAnalysisEndpoint = localProperties.getProperty("AI_ANALYSIS_ENDPOINT", "")
+
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"$cloudinaryCloudName\"")
+        buildConfigField("String", "CLOUDINARY_UNSIGNED_PRESET", "\"$cloudinaryUnsignedPreset\"")
+        buildConfigField("String", "AI_ANALYSIS_ENDPOINT", "\"$aiAnalysisEndpoint\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

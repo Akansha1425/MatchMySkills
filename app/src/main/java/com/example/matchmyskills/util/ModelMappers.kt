@@ -140,10 +140,15 @@ fun DocumentSnapshot.toApplication(): Application? {
             recruiterId = getString("recruiterId") ?: "",
             candidateId = getString("candidateId") ?: "",
             candidateName = getString("candidateName") ?: getString("applicantName") ?: "",
+            name = getString("name") ?: getString("candidateName") ?: getString("applicantName") ?: "",
             candidateEmail = getString("candidateEmail") ?: getString("applicantEmail") ?: "",
+            email = getString("email") ?: getString("candidateEmail") ?: getString("applicantEmail") ?: "",
             candidateCollege = getString("candidateCollege") ?: "",
             resumeUrl = getString("resumeUrl") ?: "",
+            resumeType = getString("resumeType") ?: "",
+            resumeText = getString("resumeText") ?: "",
             candidateSkills = get("candidateSkills") as? List<String> ?: emptyList(),
+            skills = get("skills") as? List<String> ?: (get("candidateSkills") as? List<String>) ?: emptyList(),
             matchScore = getDouble("matchScore") ?: 0.0,
             coreMatchCount = getLong("coreMatchCount")?.toInt() ?: 0,
             optionalMatchCount = getLong("optionalMatchCount")?.toInt() ?: 0,
@@ -152,6 +157,7 @@ fun DocumentSnapshot.toApplication(): Application? {
             matchedSkills = get("matchedSkills") as? List<String> ?: emptyList(),
             missingSkills = get("missingSkills") as? List<String> ?: emptyList(),
             status = getString("status") ?: "Pending",
+            timestamp = getDateSafe("timestamp"),
             appliedAt = getDateSafe("appliedAt"),
             createdAt = getDateSafe("createdAt")
         )

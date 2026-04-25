@@ -1,12 +1,15 @@
 package com.example.matchmyskills
 
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.text.HtmlCompat
 import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.util.CloudinaryResumeUploader
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
@@ -20,6 +23,35 @@ class JobDetailActivity : AppCompatActivity() {
     private val auth = FirebaseAuth.getInstance()
     private var currentJob: Job? = null
     private lateinit var btnApply: Button
+    private var activeResumeInput: TextInputEditText? = null
+    private var activeResumeStatus: TextView? = null
+    private var activeSubmitButton: Button? = null
+    private var uploadedResumeUrl: String? = null
+    private var uploadedResumeType: String? = null
+
+    private val pdfPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+
+        CloudinaryResumeUploader.uploadPdf(
+            context = this,
+            pdfUri = uri,
+            onStart = {
+                activeSubmitButton?.isEnabled = false
+                activeResumeStatus?.text = "Uploading PDF..."
+            },
+            onSuccess = { secureUrl ->
+                uploadedResumeUrl = secureUrl
+                uploadedResumeType = "pdf"
+                activeResumeInput?.setText(secureUrl)
+                activeResumeStatus?.text = "PDF uploaded successfully"
+                activeSubmitButton?.isEnabled = true
+            },
+            onError = { message ->
+                activeResumeStatus?.text = message
+                activeSubmitButton?.isEnabled = true
+            }
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,8 +107,16 @@ class JobDetailActivity : AppCompatActivity() {
         val etMarks = view.findViewById<TextInputEditText>(R.id.etMarks)
         val etSkills = view.findViewById<TextInputEditText>(R.id.etSkills)
         val etResumeUrl = view.findViewById<TextInputEditText>(R.id.etResumeUrl)
+        val tvResumeUploadStatus = view.findViewById<TextView>(R.id.tvResumeUploadStatus)
+        val btnUploadResumePdf = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUploadResumePdf)
         val etReason = view.findViewById<TextInputEditText>(R.id.etReason)
         val btnSubmit = view.findViewById<Button>(R.id.btnSubmitApplication)
+
+        uploadedResumeUrl = null
+        uploadedResumeType = null
+        activeResumeInput = etResumeUrl
+        activeResumeStatus = tvResumeUploadStatus
+        activeSubmitButton = btnSubmit
 
         // Autofill from profile
         val userId = auth.currentUser?.uid
@@ -85,10 +125,15 @@ class JobDetailActivity : AppCompatActivity() {
                 if (doc.exists()) {
                     etName.setText(doc.getString("name"))
                     etEmail.setText(doc.getString("email"))
+                    etResumeUrl.setText(doc.getString("resumeUrl") ?: "")
                     val skillsList = doc.get("skills") as? List<String>
                     etSkills.setText(skillsList?.joinToString(", "))
                 }
             }
+        }
+
+        btnUploadResumePdf.setOnClickListener {
+            pdfPickerLauncher.launch("application/pdf")
         }
 
         btnSubmit.setOnClickListener {
@@ -96,12 +141,19 @@ class JobDetailActivity : AppCompatActivity() {
             val email = etEmail.text.toString().trim()
             val marks = etMarks.text.toString().trim()
             val skills = etSkills.text.toString().trim()
-            val resumeUrl = etResumeUrl.text.toString().trim()
+            val pastedResumeUrl = etResumeUrl.text.toString().trim()
             val reason = etReason.text.toString().trim()
 
-            if (name.isEmpty() || email.isEmpty() || resumeUrl.isEmpty() || reason.isEmpty()) {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+            if (name.isEmpty() || email.isEmpty() || skills.isEmpty()) {
+                Toast.makeText(this, "Name, email and skills are required", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
+            }
+
+            val finalResumeUrl = uploadedResumeUrl?.takeIf { it.isNotBlank() } ?: pastedResumeUrl
+            val finalResumeType = when {
+                uploadedResumeType == "pdf" && finalResumeUrl.isNotBlank() -> "pdf"
+                finalResumeUrl.isNotBlank() -> "link"
+                else -> ""
             }
 
             btnSubmit.isEnabled = false
@@ -109,7 +161,7 @@ class JobDetailActivity : AppCompatActivity() {
 
             // Convert skills string to list
             val skillsList = skills.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            submitApplication(name, email, marks, skillsList, resumeUrl, reason, dialog)
+            submitApplication(name, email, marks, skillsList, finalResumeUrl, finalResumeType, reason, dialog)
         }
 
         dialog.show()
@@ -121,6 +173,7 @@ class JobDetailActivity : AppCompatActivity() {
         marks: String,
         candidateSkills: List<String>,
         resumeUrl: String,
+        resumeType: String,
         reason: String,
         dialog: BottomSheetDialog
     ) {
@@ -151,19 +204,25 @@ class JobDetailActivity : AppCompatActivity() {
             "candidateId" to applicantId,
             "userId" to applicantId,
             "candidateName" to name,
+            "name" to name,
             "applicantName" to name,
             "candidateEmail" to email,
+            "email" to email,
             "applicantEmail" to email,
             "candidateMarks" to marks,
             "resumeUrl" to resumeUrl,
+            "resumeType" to resumeType,
+            "resumeText" to "",
             "candidateReason" to reason,
             "candidateSkills" to candidateSkills,
+            "skills" to candidateSkills,
             "matchScore" to scoreResult.matchScore,
             "coreMatchCount" to scoreResult.coreMatchCount,
             "optionalMatchCount" to scoreResult.optionalMatchCount,
             "matchedSkills" to scoreResult.matchedSkills,
             "missingSkills" to scoreResult.missingSkills,
             "status" to "Pending",
+            "timestamp" to FieldValue.serverTimestamp(),
             "appliedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
             "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )

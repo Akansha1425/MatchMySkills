@@ -113,10 +113,15 @@ data class Application(
     val recruiterId: String = "",
     val candidateId: String = "",
     val candidateName: String = "",
+    val name: String = "",
     val candidateEmail: String = "",
+    val email: String = "",
     val candidateCollege: String = "",
     val resumeUrl: String = "",
+    val resumeType: String = "",
+    val resumeText: String = "",
     val candidateSkills: List<String> = emptyList(),
+    val skills: List<String> = emptyList(),
     val matchScore: Double = 0.0,
     val coreMatchCount: Int = 0,
     val optionalMatchCount: Int = 0,
@@ -125,6 +130,7 @@ data class Application(
     val matchedSkills: List<String> = emptyList(),
     val missingSkills: List<String> = emptyList(),
     val status: String = "Pending", // Pending, Shortlisted, Rejected, Hired
+    val timestamp: Date? = null,
     val appliedAt: Date? = null, // Changed from Long
     @ServerTimestamp val createdAt: Date? = null
 ) : Parcelable
