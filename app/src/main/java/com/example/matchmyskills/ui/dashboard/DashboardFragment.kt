@@ -60,17 +60,20 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
     }
 
     private fun requestLocationPermission() {
-        if (LocationHelper.isLocationPermissionGranted(requireContext())) {
-            Log.d("LocationPermission", "Permission already granted")
-            fetchLocation()
-        } else {
-            Log.d("LocationPermission", "Requesting permission")
-            requestLocationPermission.launch(LocationHelper.getRequiredPermissions()[0])
+        context?.let { ctx ->
+            if (LocationHelper.isLocationPermissionGranted(ctx)) {
+                Log.d("LocationPermission", "Permission already granted")
+                fetchLocation()
+            } else {
+                Log.d("LocationPermission", "Requesting permission")
+                requestLocationPermission.launch(LocationHelper.getRequiredPermissions()[0])
+            }
         }
     }
 
     private fun fetchLocation() {
-        LocationHelper.fetchLocation(requireContext(), object : LocationHelper.LocationCallback {
+        val ctx = context ?: return
+        LocationHelper.fetchLocation(ctx, object : LocationHelper.LocationCallback {
             override fun onLocationFetched(city: String, state: String) {
                 val dashboardBinding = _binding ?: return
                 val loc = "$city, $state"

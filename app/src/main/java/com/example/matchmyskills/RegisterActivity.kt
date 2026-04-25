@@ -210,38 +210,47 @@ class RegisterActivity : AppCompatActivity() {
         val progressBar = findViewById<ProgressBar>(R.id.progress_bar)
         progressBar.visibility = View.GONE
 
-        if (role.isNullOrEmpty()) {
-            Toast.makeText(this, "No role assigned", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        repository.saveUserRole(role)
+        val finalRole = role ?: selectedRole
+        repository.saveUserRole(finalRole)
         repository.setLoggedIn(true)
 
-        when (role) {
-            "recruiter" -> {
-                FirebaseFirestore.getInstance().collection("users").document(uid).get()
-                    .addOnSuccessListener { doc ->
-                        val companyName = doc.getString("companyName")
-                        if (companyName.isNullOrEmpty()) {
-                            startActivity(Intent(this, OnboardingActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            })
-                        } else {
-                            startActivity(Intent(this, MainActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            })
-                        }
-                        finish()
+        if (finalRole.equals("recruiter", ignoreCase = true)) {
+            // Check if onboarding complete - we already fetched doc in calling method usually, 
+            // but to be safe and consistent with LoginActivity logic:
+            FirebaseFirestore.getInstance().collection("users").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    val companyName = doc.getString("companyName")
+                    if (companyName.isNullOrEmpty()) {
+                        startActivity(Intent(this, OnboardingActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        })
+                    } else {
+                        startActivity(Intent(this, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        })
                     }
-            }
-            "student" -> {
-                val intent = Intent(this, StudentDashboard::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    finish()
                 }
-                startActivity(intent)
-                finish()
+                .addOnFailureListener {
+                    // Fallback to onboarding if fetch fails
+                    startActivity(Intent(this, OnboardingActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    })
+                    finish()
+                }
+        } else if (finalRole.equals("admin", ignoreCase = true)) {
+            val intent = Intent(this, AdminDashboard::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
+            startActivity(intent)
+            finish()
+        } else {
+            // Student
+            val intent = Intent(this, StudentDashboard::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
         }
     }
 }

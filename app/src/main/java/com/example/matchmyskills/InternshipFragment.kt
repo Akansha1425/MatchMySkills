@@ -89,11 +89,17 @@ class InternshipFragment : Fragment(R.layout.fragment_internship) {
             }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            externalInternships = ExternalOpportunityDataSource.fetchJobs(
-                keyword = "internship",
-                type = "INTERNSHIP"
-            )
-            onSourceLoaded()
+            try {
+                externalInternships = ExternalOpportunityDataSource.fetchJobs(
+                    keyword = "internship",
+                    type = "INTERNSHIP"
+                )
+            } catch (e: Exception) {
+                Log.e("InternshipFragment", "External fetch failed", e)
+                externalInternships = emptyList()
+            } finally {
+                onSourceLoaded()
+            }
         }
     }
 

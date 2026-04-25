@@ -132,11 +132,20 @@ fun DocumentSnapshot.toJobOpportunity(): JobOpportunity? {
 
 fun DocumentSnapshot.toApplication(): Application? {
     return try {
+        val legacyOpportunityType = getString("opportunityType") ?: "JOB"
+        val normalizedType = getString("type")?.lowercase()?.takeIf { it.isNotBlank() }
+            ?: when (legacyOpportunityType.uppercase()) {
+                "INTERNSHIP" -> "internship"
+                "HACKATHON" -> "hackathon"
+                else -> "job"
+            }
+
         Application(
             id = id,
+            type = normalizedType,
             jobId = getString("jobId") ?: "",
             opportunityId = getString("opportunityId") ?: getString("jobId") ?: "",
-            opportunityType = getString("opportunityType") ?: "JOB",
+            opportunityType = legacyOpportunityType,
             source = getString("source") ?: "FIREBASE",
             recruiterId = getString("recruiterId") ?: "",
             candidateId = getString("candidateId") ?: "",

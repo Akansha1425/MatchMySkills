@@ -20,6 +20,10 @@
             android:exported="false"
             android:theme="@style/Theme.MatchMySkills" />
         <activity
+            android:name=".ResumePreviewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MatchMySkills" />
+        <activity
             android:name=".AdminDashboard"
             android:exported="false" />
         <activity

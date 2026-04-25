@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.text.HtmlCompat
 import com.example.matchmyskills.model.Hackathon
+import com.example.matchmyskills.util.ApplicationFormUtils
+import com.example.matchmyskills.util.ApplicationType
 import com.example.matchmyskills.util.CloudinaryResumeUploader
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.textfield.TextInputEditText
@@ -107,6 +109,7 @@ class OpportunityDetailActivity : AppCompatActivity() {
         val btnUploadResumePdf = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUploadResumePdf)
         val etReason = view.findViewById<TextInputEditText>(R.id.etReason)
         val btnSubmit = view.findViewById<Button>(R.id.btnSubmitApplication)
+        val applicationType = ApplicationType.HACKATHON
 
         uploadedResumeUrl = null
         uploadedResumeType = null
@@ -114,13 +117,14 @@ class OpportunityDetailActivity : AppCompatActivity() {
         activeResumeStatus = tvResumeUploadStatus
         activeSubmitButton = btnSubmit
 
+        ApplicationFormUtils.configureResumeSection(view, applicationType, etResumeUrl)
+
         val userId = auth.currentUser?.uid
         if (userId != null) {
             db.collection("users").document(userId).get().addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     etName.setText(doc.getString("name"))
                     etEmail.setText(doc.getString("email"))
-                    etResumeUrl.setText(doc.getString("resumeUrl") ?: "")
                     val skillsList = doc.get("skills") as? List<String>
                     etSkills.setText(skillsList?.joinToString(", "))
                 }
@@ -151,12 +155,28 @@ class OpportunityDetailActivity : AppCompatActivity() {
                 else -> ""
             }
 
+            val resumeValidationError = ApplicationFormUtils.validateResume(applicationType, finalResumeUrl)
+            if (resumeValidationError != null) {
+                Toast.makeText(this, resumeValidationError, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             val skillsList = skills.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
             btnSubmit.isEnabled = false
             btnSubmit.text = "Submitting..."
 
-            submitApplication(name, email, marks, skillsList, finalResumeUrl, finalResumeType, reason, dialog)
+            submitApplication(
+                name = name,
+                email = email,
+                marks = marks,
+                candidateSkills = skillsList,
+                resumeUrl = finalResumeUrl,
+                resumeType = finalResumeType,
+                reason = reason,
+                applicationType = applicationType,
+                dialog = dialog
+            )
         }
 
         dialog.show()
@@ -170,6 +190,7 @@ class OpportunityDetailActivity : AppCompatActivity() {
         resumeUrl: String,
         resumeType: String,
         reason: String,
+        applicationType: ApplicationType,
         dialog: BottomSheetDialog
     ) {
         val hackathon = currentHackathon ?: return
@@ -185,6 +206,7 @@ class OpportunityDetailActivity : AppCompatActivity() {
         val applicationData = hashMapOf(
             "id" to applicationId,
             "applicationId" to applicationId,
+            "type" to applicationType.value,
             "opportunityId" to hackathon.id,
             "externalOpportunityId" to hackathon.id,
             "jobId" to "",

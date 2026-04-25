@@ -82,18 +82,21 @@ class StudentDashboardRepository @Inject constructor(
         val applicationDocs = applicationsDeferred.await()
 
         val appliedJobs = applicationDocs.count {
-            val type = it.getString("opportunityType").orEmpty()
-            type.equals("JOB", ignoreCase = true)
+            val type = it.getString("type")?.lowercase()
+            val legacyType = it.getString("opportunityType").orEmpty()
+            type == "job" || legacyType.equals("JOB", ignoreCase = true)
         }
 
         val appliedInternships = applicationDocs.count {
-            val type = it.getString("opportunityType").orEmpty()
-            type.equals("INTERNSHIP", ignoreCase = true)
+            val type = it.getString("type")?.lowercase()
+            val legacyType = it.getString("opportunityType").orEmpty()
+            type == "internship" || legacyType.equals("INTERNSHIP", ignoreCase = true)
         }
 
         val appliedHackathons = applicationDocs.count {
-            val type = it.getString("opportunityType").orEmpty()
-            type.equals("HACKATHON", ignoreCase = true)
+            val type = it.getString("type")?.lowercase()
+            val legacyType = it.getString("opportunityType").orEmpty()
+            type == "hackathon" || legacyType.equals("HACKATHON", ignoreCase = true)
         }
 
         DashboardStats(

@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.text.HtmlCompat
 import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.util.ApplicationFormUtils
+import com.example.matchmyskills.util.ApplicationType
 import com.example.matchmyskills.util.CloudinaryResumeUploader
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.textfield.TextInputEditText
@@ -111,12 +113,15 @@ class JobDetailActivity : AppCompatActivity() {
         val btnUploadResumePdf = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUploadResumePdf)
         val etReason = view.findViewById<TextInputEditText>(R.id.etReason)
         val btnSubmit = view.findViewById<Button>(R.id.btnSubmitApplication)
+        val applicationType = ApplicationType.fromOpportunityType(currentJob?.opportunityType)
 
         uploadedResumeUrl = null
         uploadedResumeType = null
         activeResumeInput = etResumeUrl
         activeResumeStatus = tvResumeUploadStatus
         activeSubmitButton = btnSubmit
+
+        ApplicationFormUtils.configureResumeSection(view, applicationType, etResumeUrl)
 
         // Autofill from profile
         val userId = auth.currentUser?.uid
@@ -125,7 +130,9 @@ class JobDetailActivity : AppCompatActivity() {
                 if (doc.exists()) {
                     etName.setText(doc.getString("name"))
                     etEmail.setText(doc.getString("email"))
-                    etResumeUrl.setText(doc.getString("resumeUrl") ?: "")
+                    if (applicationType != ApplicationType.HACKATHON) {
+                        etResumeUrl.setText(doc.getString("resumeUrl") ?: "")
+                    }
                     val skillsList = doc.get("skills") as? List<String>
                     etSkills.setText(skillsList?.joinToString(", "))
                 }
@@ -156,12 +163,28 @@ class JobDetailActivity : AppCompatActivity() {
                 else -> ""
             }
 
+            val resumeValidationError = ApplicationFormUtils.validateResume(applicationType, finalResumeUrl)
+            if (resumeValidationError != null) {
+                Toast.makeText(this, resumeValidationError, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             btnSubmit.isEnabled = false
             btnSubmit.text = "Submitting..."
 
             // Convert skills string to list
             val skillsList = skills.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            submitApplication(name, email, marks, skillsList, finalResumeUrl, finalResumeType, reason, dialog)
+            submitApplication(
+                name = name,
+                email = email,
+                marks = marks,
+                candidateSkills = skillsList,
+                resumeUrl = finalResumeUrl,
+                resumeType = finalResumeType,
+                reason = reason,
+                applicationType = applicationType,
+                dialog = dialog
+            )
         }
 
         dialog.show()
@@ -175,6 +198,7 @@ class JobDetailActivity : AppCompatActivity() {
         resumeUrl: String,
         resumeType: String,
         reason: String,
+        applicationType: ApplicationType,
         dialog: BottomSheetDialog
     ) {
         val job = currentJob ?: return
@@ -184,15 +208,12 @@ class JobDetailActivity : AppCompatActivity() {
         val scoreResult = com.example.matchmyskills.util.MatchingEngine.calculateMatchScore(candidateSkills, job)
 
         val applicationId = UUID.randomUUID().toString()
-        val normalizedType = if (job.opportunityType.equals("INTERNSHIP", ignoreCase = true)) {
-            "INTERNSHIP"
-        } else {
-            "JOB"
-        }
+        val normalizedType = applicationType.opportunityType
 
         val applicationData = hashMapOf(
             "id" to applicationId,
             "applicationId" to applicationId,
+            "type" to applicationType.value,
             "opportunityId" to job.id,
             "externalOpportunityId" to job.id,
             "jobId" to job.id,

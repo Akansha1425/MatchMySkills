@@ -27,7 +27,6 @@ class JobRepository @Inject constructor(
 
         val listener = firestore.collection("jobs")
             .whereEqualTo("recruiterId", recruiterId)
-             .orderBy("createdAt", Query.Direction.DESCENDING) // Removed to avoid composite index requirement
             .addSnapshotListener { snapshot, error ->
                 if (FirebaseAuth.getInstance().currentUser == null) {
                     return@addSnapshotListener

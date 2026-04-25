@@ -22,6 +22,14 @@ object CloudinaryResumeUploader {
             return
         }
 
+        val mimeType = context.contentResolver.getType(pdfUri)?.lowercase().orEmpty()
+        val uriPath = pdfUri.toString().lowercase()
+        val isPdf = mimeType == "application/pdf" || uriPath.endsWith(".pdf")
+        if (!isPdf) {
+            onError("Only PDF files are allowed")
+            return
+        }
+
         onStart()
 
         MediaManager.get().upload(pdfUri)

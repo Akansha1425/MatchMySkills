@@ -21,4 +21,6 @@
     <color name="dashboard_background">#F8FAFC</color>
     <color name="dashboard_surface">#FFFFFFFF</color>
     <color name="dashboard_nav_inactive">#64748B</color>
+    <color name="dashboard_danger">#EF4444</color>
+    <color name="dashboard_info">#3B82F6</color>
 </resources>

@@ -126,34 +126,41 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun navigateByRole(uid: String, role: String?) {
+    private fun navigateByRole(uid: String, selectedRole: String?) {
         val progressBar = findViewById<ProgressBar>(R.id.progress_bar)
-        progressBar.visibility = View.GONE
-
-        if (role.isNullOrEmpty()) {
-            Toast.makeText(this, "No role assigned", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        repository.saveUserRole(role)
-        repository.setLoggedIn(true)
-
-        when (role) {
-            "recruiter" -> {
-                FirebaseFirestore.getInstance().collection("users").document(uid).get()
-                    .addOnSuccessListener { doc ->
-                        val companyName = doc.getString("companyName")
-                        if (companyName.isNullOrEmpty()) navigateToOnboarding() else navigateToMain()
-                    }
-            }
-            "student" -> {
-                val intent = Intent(this, StudentDashboard::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val btnLogin = findViewById<Button>(R.id.btn_login)
+        FirebaseFirestore.getInstance().collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                if (!doc.exists()) {
+                    // New user or missing profile, go to onboarding
+                    navigateToOnboarding()
+                    return@addOnSuccessListener
                 }
-                startActivity(intent)
-                finish()
+
+                val role = doc.getString("role") ?: selectedRole ?: "student"
+                if (role.equals("recruiter", ignoreCase = true)) {
+                    val companyName = doc.getString("companyName")
+                    if (companyName.isNullOrEmpty()) {
+                        navigateToOnboarding()
+                    } else {
+                        navigateToMain()
+                    }
+                } else if (role.equals("admin", ignoreCase = true)) {
+                    val intent = Intent(this, AdminDashboard::class.java)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    // Student
+                    val intent = Intent(this, StudentDashboard::class.java)
+                    startActivity(intent)
+                    finish()
+                }
             }
-        }
+            .addOnFailureListener { e ->
+                progressBar.visibility = View.GONE
+                btnLogin.isEnabled = true
+                Toast.makeText(this, "Error fetching user data: ${e.message}", Toast.LENGTH_LONG).show()
+            }
     }
 
     private fun navigateToMain() {

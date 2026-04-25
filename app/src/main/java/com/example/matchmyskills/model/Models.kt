@@ -107,6 +107,7 @@ data class Hackathon(
 @TypeConverters(Converters::class)
 data class Application(
     @PrimaryKey val id: String = "",
+    val type: String = "",
     val jobId: String = "",
     val opportunityId: String = "",
     val opportunityType: String = "JOB",

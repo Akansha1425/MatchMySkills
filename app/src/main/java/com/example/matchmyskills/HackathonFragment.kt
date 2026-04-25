@@ -16,6 +16,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.example.matchmyskills.adapter.HackathonAdapter
 import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
 import com.example.matchmyskills.model.Hackathon
+import com.example.matchmyskills.util.toHackathon
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
@@ -68,15 +69,9 @@ class HackathonFragment : Fragment(R.layout.fragment_hackathon) {
             .addOnSuccessListener { documents ->
                 val hackathonList = mutableListOf<Hackathon>()
                 for (doc in documents) {
-                    try {
-                        val parsed = doc.toObject(Hackathon::class.java)
-                        val hackathon = parsed.copy(
-                            opportunityType = parsed.opportunityType.ifBlank { "HACKATHON" },
-                            source = parsed.source.ifBlank { "FIREBASE" }
-                        )
+                    val hackathon = doc.toHackathon()
+                    if (hackathon != null) {
                         hackathonList.add(hackathon)
-                    } catch (e: Exception) {
-                        Log.e("HackathonFragment", "Error parsing doc ${doc.id}", e)
                     }
                 }
                 firebaseHackathons = hackathonList
@@ -89,8 +84,14 @@ class HackathonFragment : Fragment(R.layout.fragment_hackathon) {
             }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            externalHackathons = ExternalOpportunityDataSource.fetchHackathons()
-            onSourceLoaded()
+            try {
+                externalHackathons = ExternalOpportunityDataSource.fetchHackathons()
+            } catch (e: Exception) {
+                Log.e("HackathonFragment", "External fetch failed", e)
+                externalHackathons = emptyList()
+            } finally {
+                onSourceLoaded()
+            }
         }
     }
 

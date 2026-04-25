@@ -57,6 +57,7 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilResumeUrl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Resume Link (Optional)"
@@ -70,23 +71,30 @@
             android:inputType="textUri"/>
     </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnUploadResumePdf"
-        style="@style/Widget.Material3.Button.OutlinedButton"
+    <LinearLayout
+        android:id="@+id/layoutResumeSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:text="Upload Resume PDF"
-        app:icon="@android:drawable/ic_menu_upload" />
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tvResumeUploadStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:text="You can upload PDF, paste a link, or skip resume"
-        android:textAppearance="?attr/textAppearanceBodySmall"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUploadResumePdf"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Upload Resume PDF"
+            app:icon="@android:drawable/ic_menu_upload" />
+
+        <TextView
+            android:id="@+id/tvResumeUploadStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="You can upload PDF, paste a link, or skip resume"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+    </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"

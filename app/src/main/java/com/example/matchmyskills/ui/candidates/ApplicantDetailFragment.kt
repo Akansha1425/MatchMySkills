@@ -156,10 +156,11 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
                         } else {
                             url
                         }
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(finalUrl))
+                        val intent = android.content.Intent(requireContext(), com.example.matchmyskills.ResumePreviewActivity::class.java)
+                        intent.putExtra("resume_url", finalUrl)
                         startActivity(intent)
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Could not open resume. Please ensure a valid browser is installed.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Could not open resume preview.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     Toast.makeText(context, "No resume URL provided", Toast.LENGTH_SHORT).show()
