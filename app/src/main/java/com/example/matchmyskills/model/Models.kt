@@ -20,6 +20,7 @@ data class User(
     val companyName: String? = null,
     val industry: String? = null,
     val website: String? = null,
+    val profileImage: String? = null,
     val profileImageUrl: String? = null,
     val skills: List<String> = emptyList(),
     // New Professional Recruiter Fields

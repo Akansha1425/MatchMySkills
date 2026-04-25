@@ -42,7 +42,7 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
             fetchLocation()
         } else {
             Log.w("LocationPermission", "Permission denied")
-            binding.locationText.text = "Location permission denied"
+            _binding?.locationText?.text = "Location permission denied"
         }
     }
 
@@ -72,15 +72,16 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
     private fun fetchLocation() {
         LocationHelper.fetchLocation(requireContext(), object : LocationHelper.LocationCallback {
             override fun onLocationFetched(city: String, state: String) {
+                val dashboardBinding = _binding ?: return
                 val loc = "$city, $state"
-                binding.locationText.text = "📍 $loc"
+                dashboardBinding.locationText.text = "📍 $loc"
                 Log.d("LocationFetched", "Location: $loc")
                 // Save to profile so it's visible on Profile Page
                 authViewModel.updateProfile(mapOf("location" to loc))
             }
 
             override fun onLocationError(message: String) {
-                binding.locationText.text = message
+                _binding?.locationText?.text = message
                 Log.e("LocationError", message)
             }
         })

@@ -80,10 +80,23 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         ivProfileDashboard = view.findViewById(R.id.iv_profile_dashboard)
         
         ivProfileDashboard.setOnClickListener {
-            currentProfileImageUrl?.let { url ->
+            val url = currentProfileImageUrl?.trim().orEmpty()
+            if (url.isBlank()) {
+                Log.w("HomeFragment", "Profile image clicked with no URL available")
+                return@setOnClickListener
+            }
+
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                Log.w("HomeFragment", "Profile image URL is invalid: $url")
+                return@setOnClickListener
+            }
+
+            runCatching {
                 val intent = Intent(requireContext(), ImagePreviewActivity::class.java)
                 intent.putExtra("image_url", url)
                 startActivity(intent)
+            }.onFailure { error ->
+                Log.e("HomeFragment", "Failed to open profile preview", error)
             }
         }
         
@@ -166,12 +179,19 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     tvGreeting.text = "Welcome back, $name 👋"
 
                     if (!profileImageUrl.isNullOrBlank()) {
-                        Glide.with(this)
-                            .load(profileImageUrl)
-                            .circleCrop()
-                            .placeholder(R.drawable.ic_profile)
-                            .error(R.drawable.ic_profile)
-                            .into(ivProfileDashboard)
+                        runCatching {
+                            Glide.with(this)
+                                .load(profileImageUrl)
+                                .circleCrop()
+                                .placeholder(R.drawable.ic_profile)
+                                .error(R.drawable.ic_profile)
+                                .into(ivProfileDashboard)
+                        }.onFailure { error ->
+                            Log.e("HomeFragment", "Failed to load profile image", error)
+                            ivProfileDashboard.setImageResource(R.drawable.ic_profile)
+                        }
+                    } else {
+                        ivProfileDashboard.setImageResource(R.drawable.ic_profile)
                     }
                 }
             }

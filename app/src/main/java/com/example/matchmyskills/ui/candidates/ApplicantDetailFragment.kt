@@ -184,38 +184,37 @@ class ApplicantDetailFragment : Fragment(R.layout.fragment_applicant_detail) {
             return
         }
 
-        lifecycleScope.launch {
-            try {
-                firestore.collection("users").document(candidateId).get()
-                    .addOnSuccessListener { doc ->
-                        if (!isAdded || _binding == null) return@addOnSuccessListener
+        if (!isAdded || _binding == null) return
 
-                        val profileImage = doc.getString("profileImage")
-                        val profileImageUrl = doc.getString("profileImageUrl")
-                        val actualUrl = profileImage ?: profileImageUrl
-                        currentProfileImageUrl = actualUrl
-                        
-                        if (!actualUrl.isNullOrBlank()) {
-                            Glide.with(this@ApplicantDetailFragment)
-                                .load(actualUrl)
-                                .circleCrop()
-                                .placeholder(R.drawable.ic_profile)
-                                .error(R.drawable.ic_profile)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(binding.ivProfile)
-                        } else {
-                            binding.ivProfile.setImageResource(R.drawable.ic_profile)
-                        }
-                    }
-                    .addOnFailureListener {
-                        if (isAdded && _binding != null) {
-                            binding.ivProfile.setImageResource(R.drawable.ic_profile)
-                        }
-                    }
-            } catch (e: Exception) {
-                Log.e("ApplicantDetail", "Error loading profile image", e)
+        binding.ivProfile.setImageResource(R.drawable.ic_profile)
+
+        firestore.collection("users").document(candidateId).get()
+            .addOnSuccessListener { doc ->
+                if (!isAdded || _binding == null) return@addOnSuccessListener
+
+                val profileImage = doc.getString("profileImage")?.trim().orEmpty()
+                val profileImageUrl = doc.getString("profileImageUrl")?.trim().orEmpty()
+                val actualImageUrl = profileImage.ifBlank { profileImageUrl }
+                currentProfileImageUrl = actualImageUrl.ifBlank { null }
+
+                if (actualImageUrl.isNotBlank()) {
+                    Glide.with(this@ApplicantDetailFragment)
+                        .load(actualImageUrl)
+                        .circleCrop()
+                        .placeholder(R.drawable.ic_profile)
+                        .error(R.drawable.ic_profile)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(binding.ivProfile)
+                } else {
+                    binding.ivProfile.setImageResource(R.drawable.ic_profile)
+                }
             }
-        }
+            .addOnFailureListener { error ->
+                Log.e("ApplicantDetail", "Error loading profile image", error)
+                if (isAdded && _binding != null) {
+                    binding.ivProfile.setImageResource(R.drawable.ic_profile)
+                }
+            }
     }
 
     private fun setupListeners() {

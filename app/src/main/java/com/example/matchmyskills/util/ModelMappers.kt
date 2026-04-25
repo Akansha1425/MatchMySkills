@@ -24,6 +24,7 @@ fun DocumentSnapshot.toUser(): User? {
             companyName = getString("companyName"),
             industry = getString("industry"),
             website = getString("website"),
+            profileImage = getString("profileImage") ?: getString("profileImageUrl"),
             profileImageUrl = getString("profileImageUrl"),
             location = getString("location"),
             companySize = getString("companySize"),

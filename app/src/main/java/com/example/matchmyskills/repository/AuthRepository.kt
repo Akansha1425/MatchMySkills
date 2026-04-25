@@ -2,6 +2,7 @@ package com.example.matchmyskills.repository
 
 import com.example.matchmyskills.model.User
 import com.example.matchmyskills.util.UiState
+import com.cloudinary.android.MediaManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import android.util.Log
+import com.example.matchmyskills.BuildConfig
 import com.example.matchmyskills.util.toUser
 import com.example.matchmyskills.util.getDateSafe
 import javax.inject.Inject
@@ -129,15 +131,51 @@ class AuthRepository @Inject constructor(
     fun uploadProfileImage(userId: String, uri: android.net.Uri): Flow<UiState<String>> = callbackFlow {
         trySend(UiState.Loading)
         try {
-            val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
-                .child("profiles/$userId.jpg")
+            val preset = BuildConfig.CLOUDINARY_UNSIGNED_PRESET
+            if (preset.isBlank()) {
+                trySend(UiState.Error("Cloudinary upload preset is not configured"))
+                awaitClose { }
+                return@callbackFlow
+            }
 
-            storageRef.putFile(uri).await()
-            val downloadUrl = storageRef.downloadUrl.await().toString()
+            MediaManager.get().upload(uri)
+                .unsigned(preset)
+                .option("public_id", "profile_$userId")
+                .option("folder", "matchmyskills/profiles")
+                .callback(object : com.cloudinary.android.callback.UploadCallback {
+                    override fun onStart(requestId: String?) = Unit
 
-            firestore.collection("users").document(userId).update("profileImageUrl", downloadUrl).await()
+                    override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) = Unit
 
-            trySend(UiState.Success(downloadUrl))
+                    override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
+                        val downloadUrl = resultData?.get("secure_url")?.toString().orEmpty()
+                        if (downloadUrl.isBlank()) {
+                            trySend(UiState.Error("Upload succeeded but image URL is missing"))
+                            return
+                        }
+
+                        firestore.collection("users").document(userId)
+                            .update(
+                                mapOf(
+                                    "profileImage" to downloadUrl,
+                                    "profileImageUrl" to downloadUrl
+                                )
+                            )
+                            .addOnSuccessListener {
+                                trySend(UiState.Success(downloadUrl))
+                            }
+                            .addOnFailureListener { error ->
+                                trySend(UiState.Error(error.message ?: "Failed to save profile image URL"))
+                            }
+                    }
+
+                    override fun onError(requestId: String?, error: com.cloudinary.android.callback.ErrorInfo?) {
+                        trySend(UiState.Error(error?.description ?: "Failed to upload image"))
+                    }
+
+                    override fun onReschedule(requestId: String?, error: com.cloudinary.android.callback.ErrorInfo?) = Unit
+                })
+                .dispatch()
         } catch (e: Exception) {
             trySend(UiState.Error(e.message ?: "Failed to upload image"))
         }

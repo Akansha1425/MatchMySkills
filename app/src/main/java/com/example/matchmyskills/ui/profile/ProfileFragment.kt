@@ -42,6 +42,10 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private val binding get() = _binding!!
     private var currentUser: User? = null
 
+    private val profileUiPrefs by lazy {
+        requireContext().getSharedPreferences("profile_ui_prefs", android.content.Context.MODE_PRIVATE)
+    }
+
     private val requestLocationPermission = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -121,11 +125,13 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 }
 
                 // Load Profile Image safely
-                Log.d("ProfileFragment_Image", "Binding user data - ProfileImageUrl: ${user.profileImageUrl}")
-                if (!user.profileImageUrl.isNullOrBlank()) {
-                    Log.d("ProfileFragment_Image", "Loading profile image from URL: ${user.profileImageUrl}")
+                val profileImageUrl = user.profileImageUrl ?: user.profileImage
+                Log.d("ProfileFragment_Image", "Binding user data - ProfileImageUrl: $profileImageUrl")
+                if (!profileImageUrl.isNullOrBlank()) {
+                    Log.d("ProfileFragment_Image", "Loading profile image from URL: $profileImageUrl")
                     Glide.with(this@ProfileFragment)
-                        .load(user.profileImageUrl)
+                        .load(profileImageUrl)
+                        .circleCrop()
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .placeholder(R.drawable.ic_profile)
                         .error(R.drawable.ic_profile)
@@ -134,6 +140,8 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                     Log.d("ProfileFragment_Image", "Profile image URL is null/blank, using placeholder")
                     ivProfile.setImageResource(R.drawable.ic_profile)
                 }
+
+                tvProfileImageHint.isVisible = !profileImageUrl.isNullOrBlank() && !isProfileHintDismissed(user.id)
 
                 if (user.location.isNullOrBlank()) {
                     checkLocationPermission()
@@ -189,7 +197,16 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         }
 
         binding.btnChangePhoto.setOnClickListener {
-            imagePicker.launch("image/*")
+            launchProfileImagePicker()
+        }
+
+        binding.ivProfile.setOnClickListener {
+            openProfileImagePreview()
+        }
+
+        binding.ivProfile.setOnLongClickListener {
+            launchProfileImagePicker()
+            true
         }
 
         binding.btnLogout.setOnClickListener {
@@ -207,6 +224,42 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 startActivity(browserIntent)
             } ?: Toast.makeText(context, "No LinkedIn profile linked", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun launchProfileImagePicker() {
+        if (!isAdded) return
+
+        imagePicker.launch("image/*")
+    }
+
+    private fun openProfileImagePreview() {
+        val imageUrl = currentUser?.profileImageUrl ?: currentUser?.profileImage
+        if (imageUrl.isNullOrBlank() ||
+            !(imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))
+        ) {
+            Toast.makeText(context, "No profile image to preview", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(requireContext(), com.example.matchmyskills.ImagePreviewActivity::class.java).apply {
+            putExtra("image_url", imageUrl)
+        }
+        startActivity(intent)
+
+        currentUser?.id?.let { userId ->
+            markProfileHintDismissed(userId)
+            binding.tvProfileImageHint.isVisible = false
+        }
+    }
+
+    private fun isProfileHintDismissed(userId: String): Boolean {
+        if (userId.isBlank()) return false
+        return profileUiPrefs.getBoolean("hint_dismissed_$userId", false)
+    }
+
+    private fun markProfileHintDismissed(userId: String) {
+        if (userId.isBlank()) return
+        profileUiPrefs.edit().putBoolean("hint_dismissed_$userId", true).apply()
     }
 
     private fun showEditProfileDialog() {
