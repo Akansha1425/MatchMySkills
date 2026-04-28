@@ -14,6 +14,7 @@ import com.example.matchmyskills.adapter.JobOpportunityAdapter
 import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
 import com.example.matchmyskills.model.Job
 import com.example.matchmyskills.util.toJob
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
@@ -26,6 +27,7 @@ class JobFragment : Fragment(R.layout.fragment_job) {
     private var firebaseJobs: List<Job> = emptyList()
     private var externalJobs: List<Job> = emptyList()
     private var allMergedJobs: List<Job> = emptyList()
+    private var candidateSkills: List<String> = emptyList()
     private var pendingSources: Int = 0
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -53,7 +55,19 @@ class JobFragment : Fragment(R.layout.fragment_job) {
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
 
+        fetchCandidateSkills()
         fetchJobs()
+    }
+
+    private fun fetchCandidateSkills() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                candidateSkills = doc.get("skills") as? List<String> ?: emptyList()
+                if (allMergedJobs.isNotEmpty()) {
+                    sortAndDisplayJobs()
+                }
+            }
     }
 
     private fun fetchJobs() {
@@ -110,12 +124,23 @@ class JobFragment : Fragment(R.layout.fragment_job) {
         allMergedJobs = (firebaseJobs + externalJobs)
             .distinctBy { it.id }
 
-        jobOpportunityAdapter.updateData(allMergedJobs)
+        sortAndDisplayJobs()
+    }
+
+    private fun sortAndDisplayJobs() {
+        val displayList = if (candidateSkills.isNotEmpty()) {
+            allMergedJobs.sortedByDescending { job ->
+                com.example.matchmyskills.util.MatchingEngine.calculateMatchScore(candidateSkills, job).matchScore
+            }
+        } else {
+            allMergedJobs
+        }
+        jobOpportunityAdapter.updateData(displayList, candidateSkills)
     }
 
     private fun filterJobs(query: String) {
         if (query.isEmpty()) {
-            jobOpportunityAdapter.updateData(allMergedJobs)
+            sortAndDisplayJobs()
             return
         }
 
@@ -125,6 +150,14 @@ class JobFragment : Fragment(R.layout.fragment_job) {
             it.description.contains(query, ignoreCase = true) ||
             it.location.contains(query, ignoreCase = true)
         }
-        jobOpportunityAdapter.updateData(filtered)
+        
+        val displayList = if (candidateSkills.isNotEmpty()) {
+            filtered.sortedByDescending { job ->
+                com.example.matchmyskills.util.MatchingEngine.calculateMatchScore(candidateSkills, job).matchScore
+            }
+        } else {
+            filtered
+        }
+        jobOpportunityAdapter.updateData(displayList, candidateSkills)
     }
 }

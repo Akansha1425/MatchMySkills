@@ -54,7 +54,6 @@ class DashboardAdapter(
             binding.apply {
                 tvTitle.text = job.title
                 
-                // Fix: Handle blank/Unknown company
                 tvCompany.text = if (job.companyName.isNullOrBlank() || job.companyName.equals("Unknown", ignoreCase = true)) {
                     "Posted by Recruiter"
                 } else {
@@ -70,7 +69,6 @@ class DashboardAdapter(
                     else -> "$applicationCount students applied"
                 }
 
-                // Fix: Dynamic Time Left
                 job.deadline?.let { deadline ->
                     val currentTime = System.currentTimeMillis()
                     val diff = deadline.time - currentTime
@@ -97,7 +95,6 @@ class DashboardAdapter(
             binding.apply {
                 tvTitle.text = hackathon.title
                 
-                // Fix: Handle blank/Unknown organizer
                 tvOrganizer.text = if (hackathon.organizer.isNullOrBlank() || hackathon.organizer.equals("Unknown", ignoreCase = true)) {
                     "Organized by Recruiter"
                 } else {
@@ -109,7 +106,6 @@ class DashboardAdapter(
                 tvPrize.text = "Pool: ${hackathon.prizePool}"
                 tvTeam.text = "Teams: ${hackathon.teamSize}"
 
-                // Fix: Dynamic Time Left
                 hackathon.deadline?.let { deadline ->
                     val currentTime = System.currentTimeMillis()
                     val diff = deadline.time - currentTime
@@ -124,6 +120,8 @@ class DashboardAdapter(
                     tvTimeLeft.visibility = android.view.View.GONE
                 }
 
+                // Integrate detail page click for recruiters
+                btnView.setOnClickListener { onHackathonClick(hackathon) }
                 root.setOnClickListener { onHackathonClick(hackathon) }
             }
         }

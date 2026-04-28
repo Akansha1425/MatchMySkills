@@ -42,8 +42,9 @@ class JobsFragment : Fragment(R.layout.fragment_jobs) {
                 val action = JobsFragmentDirections.actionJobsFragmentToCandidatesFragment(job.id)
                 findNavController().navigate(action)
             },
-            onHackathonClick = { _ ->
-                Toast.makeText(context, "Hackathon details coming soon", Toast.LENGTH_SHORT).show()
+            onHackathonClick = { hackathon ->
+                val action = JobsFragmentDirections.actionJobsFragmentToHackathonDetailFragment(hackathon.id)
+                findNavController().navigate(action)
             }
         )
         binding.rvJobs.layoutManager = LinearLayoutManager(context)

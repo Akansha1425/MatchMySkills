@@ -50,6 +50,20 @@ class HackathonRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    suspend fun getHackathonById(hackathonId: String): UiState<Hackathon> {
+        return try {
+            val snapshot = firestore.collection("hackathons").document(hackathonId).get().await()
+            val hackathon = snapshot.toHackathon()
+            if (hackathon != null) {
+                UiState.Success(hackathon)
+            } else {
+                UiState.Error("Hackathon not found")
+            }
+        } catch (e: Exception) {
+            UiState.Error(e.message ?: "Failed to fetch hackathon details")
+        }
+    }
+
     suspend fun createHackathon(hackathon: Hackathon): UiState<Unit> {
         return try {
             firestore.collection("hackathons").document(hackathon.id).set(hackathon).await()

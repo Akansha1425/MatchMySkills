@@ -25,6 +25,16 @@ class OpportunityViewModel @Inject constructor(
     private val _createState = MutableStateFlow<UiState<Unit>>(UiState.Empty)
     val createState: StateFlow<UiState<Unit>> = _createState
 
+    private val _hackathonDetailState = MutableStateFlow<UiState<Hackathon>>(UiState.Loading)
+    val hackathonDetailState: StateFlow<UiState<Hackathon>> = _hackathonDetailState
+
+    fun getHackathonDetails(id: String) {
+        viewModelScope.launch {
+            _hackathonDetailState.value = UiState.Loading
+            _hackathonDetailState.value = hackathonRepository.getHackathonById(id)
+        }
+    }
+
     fun createInternship(
         title: String,
         description: String,
@@ -69,7 +79,7 @@ class OpportunityViewModel @Inject constructor(
         prize: String,
         teamSize: String,
         mode: String,
-        deadlineDays: Int = 30 // Added for Date support
+        deadlineDays: Int = 30
     ) {
         val user = authRepository.getCurrentUser() ?: run {
             _createState.value = UiState.Error("User not logged in")
