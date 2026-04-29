@@ -1,5 +1,6 @@
 package com.example.matchmyskills.adapter
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,9 +8,11 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.matchmyskills.R
 import com.example.matchmyskills.model.Job
+import com.example.matchmyskills.util.MatchingEngine
 
 class JobOpportunityAdapter(
     private var jobs: List<Job>,
+    private var candidateSkills: List<String> = emptyList(),
     private val onClick: (Job) -> Unit
 ) : RecyclerView.Adapter<JobOpportunityAdapter.JobViewHolder>() {
 
@@ -21,6 +24,7 @@ class JobOpportunityAdapter(
         val tvJobStipend: TextView = itemView.findViewById(R.id.tvJobStipend)
         val tvTimeLeft: TextView = itemView.findViewById(R.id.tvTimeLeft)
         val tvJobType: TextView = itemView.findViewById(R.id.tvJobType)
+        val tvMatchScore: TextView = itemView.findViewById(R.id.tvMatchScore)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): JobViewHolder {
@@ -72,6 +76,27 @@ class JobOpportunityAdapter(
             holder.tvJobType.setTextColor(android.graphics.Color.parseColor("#2196F3"))
         }
 
+        // Calculate and display Match Score if candidate skills are available
+        if (candidateSkills.isNotEmpty()) {
+            val application = MatchingEngine.calculateMatchScore(candidateSkills, job)
+            val score = application.matchScore
+            holder.tvMatchScore.text = "${score.toInt()}% Match"
+            holder.tvMatchScore.visibility = View.VISIBLE
+            
+            val scoreColor = MatchingEngine.getScoreColor(score)
+            holder.tvMatchScore.setTextColor(Color.parseColor(scoreColor))
+            
+            // Subtle background for the score tag based on score
+            val bgColor = when {
+                score >= 90.0 -> "#E8F5E9" // Light Green
+                score >= 70.0 -> "#FFFDE7" // Light Yellow
+                else -> "#FFEBEE" // Light Red
+            }
+            holder.tvMatchScore.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(bgColor))
+        } else {
+            holder.tvMatchScore.visibility = View.GONE
+        }
+
         holder.itemView.setOnClickListener {
             onClick(job)
         }
@@ -79,8 +104,9 @@ class JobOpportunityAdapter(
 
     override fun getItemCount(): Int = jobs.size
 
-    fun updateData(newData: List<Job>) {
+    fun updateData(newData: List<Job>, skills: List<String> = candidateSkills) {
         jobs = newData
+        candidateSkills = skills
         notifyDataSetChanged()
     }
 }

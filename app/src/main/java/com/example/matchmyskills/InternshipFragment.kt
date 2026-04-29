@@ -17,6 +17,7 @@ import com.example.matchmyskills.adapter.JobOpportunityAdapter
 import com.example.matchmyskills.data.remote.ExternalOpportunityDataSource
 import com.example.matchmyskills.model.Job
 import com.example.matchmyskills.util.toJob
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,7 @@ class InternshipFragment : Fragment(R.layout.fragment_internship) {
     private var firebaseInternships: List<Job> = emptyList()
     private var externalInternships: List<Job> = emptyList()
     private var allMergedInternships: List<Job> = emptyList()
+    private var candidateSkills: List<String> = emptyList()
     private var pendingSources: Int = 0
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -56,7 +58,20 @@ class InternshipFragment : Fragment(R.layout.fragment_internship) {
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
 
+        fetchCandidateSkills()
         fetchInternships()
+    }
+
+    private fun fetchCandidateSkills() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                @Suppress("UNCHECKED_CAST")
+                candidateSkills = doc.get("skills") as? List<String> ?: emptyList()
+                if (allMergedInternships.isNotEmpty()) {
+                    sortAndDisplayInternships()
+                }
+            }
     }
 
     private fun fetchInternships() {
@@ -103,15 +118,6 @@ class InternshipFragment : Fragment(R.layout.fragment_internship) {
         }
     }
 
-    private fun isInternship(job: Job): Boolean {
-        if (job.opportunityType.equals("INTERNSHIP", ignoreCase = true)) {
-            return true
-        }
-
-        val text = "${job.title} ${job.description}".lowercase()
-        return text.contains("intern") || text.contains("internship")
-    }
-
     private fun onSourceLoaded() {
         pendingSources -= 1
         if (pendingSources > 0) return
@@ -121,12 +127,23 @@ class InternshipFragment : Fragment(R.layout.fragment_internship) {
         allMergedInternships = (firebaseInternships + externalInternships)
             .distinctBy { it.id }
 
-        internshipAdapter.updateData(allMergedInternships)
+        sortAndDisplayInternships()
+    }
+
+    private fun sortAndDisplayInternships() {
+        val displayList = if (candidateSkills.isNotEmpty()) {
+            allMergedInternships.sortedByDescending { internship ->
+                com.example.matchmyskills.util.MatchingEngine.calculateMatchScore(candidateSkills, internship).matchScore
+            }
+        } else {
+            allMergedInternships
+        }
+        internshipAdapter.updateData(displayList, candidateSkills)
     }
 
     private fun filterInternships(query: String) {
         if (query.isEmpty()) {
-            internshipAdapter.updateData(allMergedInternships)
+            sortAndDisplayInternships()
             return
         }
 
@@ -136,6 +153,14 @@ class InternshipFragment : Fragment(R.layout.fragment_internship) {
             it.description.contains(query, ignoreCase = true) ||
             it.location.contains(query, ignoreCase = true)
         }
-        internshipAdapter.updateData(filtered)
+        
+        val displayList = if (candidateSkills.isNotEmpty()) {
+            filtered.sortedByDescending { internship ->
+                com.example.matchmyskills.util.MatchingEngine.calculateMatchScore(candidateSkills, internship).matchScore
+            }
+        } else {
+            filtered
+        }
+        internshipAdapter.updateData(displayList, candidateSkills)
     }
 }

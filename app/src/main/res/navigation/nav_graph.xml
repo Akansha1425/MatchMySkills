@@ -38,6 +38,9 @@
         <action
             android:id="@+id/action_jobsFragment_to_candidatesFragment"
             app:destination="@id/candidatesFragment" />
+        <action
+            android:id="@+id/action_jobsFragment_to_hackathonDetailFragment"
+            app:destination="@id/hackathonDetailFragment" />
     </fragment>
 
     <fragment
@@ -98,6 +101,9 @@
         <argument
             android:name="hackathonId"
             app:argType="string" />
+        <action
+            android:id="@+id/action_hackathonDetailFragment_to_candidatesFragment"
+            app:destination="@id/candidatesFragment" />
     </fragment>
     <fragment
         android:id="@+id/userNotificationsFragment"
