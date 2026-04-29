@@ -54,7 +54,8 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
 
     private fun updateBarChart(data: AnalyticsViewModel.AnalyticsData) {
         val hackathonCount = data.hackathons.size
-        val internshipCount = data.jobs.count { it.opportunityType.equals("INTERNSHIP", ignoreCase = true) }
+        val internshipCount = data.jobs.
+        count { it.opportunityType.equals("INTERNSHIP", ignoreCase = true) }
         val jobCount = data.jobs.count { it.opportunityType.equals("JOB", ignoreCase = true) }
 
         val entries = ArrayList<BarEntry>()
