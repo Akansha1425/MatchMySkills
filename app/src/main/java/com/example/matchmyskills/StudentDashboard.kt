@@ -2,6 +2,7 @@ package com.example.matchmyskills
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import com.example.matchmyskills.notifications.NotificationPermissionHelper
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -9,6 +10,10 @@ import dagger.hilt.android.AndroidEntryPoint
 class StudentDashboard : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Enable dark mode support
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        
         setContentView(R.layout.activity_student_dashboard)
         NotificationPermissionHelper.requestIfNeeded(this)
 

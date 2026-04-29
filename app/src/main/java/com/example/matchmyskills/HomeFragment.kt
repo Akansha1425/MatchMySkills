@@ -107,10 +107,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         
         // Request and fetch location
         requestLocationPermission()
-
-        // DIAGNOSTIC: Show current user ID to verify mismatch
-        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-        android.widget.Toast.makeText(context, "Logged in as: $currentUid", android.widget.Toast.LENGTH_LONG).show()
     }
 
     override fun onResume() {
